@@ -133,8 +133,12 @@ def run_demo(args: argparse.Namespace) -> dict[str, Any]:
     if errors:
         trace["errors"] = errors
 
-    usage_map = context.get("_usage")
-    trace["cost"] = build_cost_summary(trace["proposals"], usage_map)
+    usage_map: dict[str, dict[str, int]] = {}
+    for p in proposals:
+        u = getattr(p, "_usage", None)
+        if u:
+            usage_map[p.expert_key] = u
+    trace["cost"] = build_cost_summary(trace["proposals"], usage_map or None)
 
     conflicts = detect_conflicts(trace["proposals"])
     if conflicts:

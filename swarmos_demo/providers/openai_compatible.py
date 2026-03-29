@@ -9,7 +9,14 @@ import urllib.request
 from http.client import RemoteDisconnected
 from typing import Any
 
-from core.types import ExpertProfile, ExpertProposal, clamp
+from core.types import (
+    AggregateResult,
+    BaselineResult,
+    CritiqueReport,
+    ExpertProfile,
+    ExpertProposal,
+    clamp,
+)
 from providers.base import BaseProvider, ProviderError
 
 logger = logging.getLogger(__name__)
@@ -177,8 +184,9 @@ class OpenAICompatibleProvider(BaseProvider):
             temperature=expert.temperature,
             max_tokens=expert.max_tokens,
         )
-        context.setdefault("_usage", {})[expert.key] = usage
-        return self._parse_structured_text(expert, context["scores"][expert.key], text)
+        proposal = self._parse_structured_text(expert, context["scores"][expert.key], text)
+        proposal._usage = usage  # type: ignore[attr-defined]
+        return proposal
 
     def critique(
         self,
@@ -186,7 +194,7 @@ class OpenAICompatibleProvider(BaseProvider):
         routed: list[tuple[ExpertProfile, float]],
         proposals: list[ExpertProposal],
         context: dict[str, Any],
-    ) -> dict[str, Any]:
+    ) -> CritiqueReport:
         joined = "\n".join(
             f"{proposal.expert_name}: {proposal.summary}\n"
             + "\n".join(f"- {item}" for item in proposal.recommendations)
@@ -226,9 +234,9 @@ class OpenAICompatibleProvider(BaseProvider):
         task: str,
         routed: list[tuple[ExpertProfile, float]],
         proposals: list[ExpertProposal],
-        critique: dict[str, Any],
+        critique: CritiqueReport,
         context: dict[str, Any],
-    ) -> dict[str, Any]:
+    ) -> AggregateResult:
         joined = "\n".join(
             f"{proposal.expert_name}: {proposal.summary}\n"
             + "\n".join(f"- {item}" for item in proposal.recommendations)
@@ -279,7 +287,7 @@ class OpenAICompatibleProvider(BaseProvider):
             sections["final_summary"] = "Aggregator did not return a structured summary."
         return sections
 
-    def baseline(self, task: str, context: dict[str, Any]) -> dict[str, Any]:
+    def baseline(self, task: str, context: dict[str, Any]) -> BaselineResult:
         system_prompt = (
             "You are a single generalist assistant. Respond concisely. "
             "Output sections exactly as: SUMMARY:, RECOMMENDATIONS:, RISKS:, CONFIDENCE:."

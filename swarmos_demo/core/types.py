@@ -24,13 +24,17 @@ class CritiqueReport(TypedDict):
     next_checks: list[str]
 
 
-class AggregateResult(TypedDict):
+class _AggregateResultRequired(TypedDict):
     selected_experts: list[str]
     consensus: list[str]
     critique_focus: list[str]
     next_steps: list[str]
     key_risks: list[str]
     final_summary: str
+
+
+class AggregateResult(_AggregateResultRequired, total=False):
+    weighted_ranking: list[dict[str, Any]]
 
 
 class BaselineResult(TypedDict):

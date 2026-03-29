@@ -179,8 +179,13 @@ def _list_traces() -> list[dict[str, Any]]:
 
 
 def _get_trace(filename: str) -> dict[str, Any] | None:
-    path = OUTPUTS_DIR / filename
-    if not path.exists() or not path.suffix == ".json":
+    safe_name = Path(filename).name
+    if not safe_name or safe_name != filename or ".." in filename:
+        return None
+    path = (OUTPUTS_DIR / safe_name).resolve()
+    if not path.is_relative_to(OUTPUTS_DIR.resolve()):
+        return None
+    if not path.exists() or path.suffix != ".json":
         return None
     try:
         return json.loads(path.read_text(encoding="utf-8"))

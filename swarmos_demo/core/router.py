@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import Any
+import threading
 
 from core.cost import _COST_PER_1K_COMPLETION, _COST_PER_1K_PROMPT
 from core.learned_router import learned_bonus, load_learned_scores
@@ -8,34 +8,39 @@ from core.reputation import load_reputation, reputation_bonus
 from core.types import ExpertProfile, TaskProfile, clamp
 from experts.registry import EXPERTS
 
+_lock = threading.Lock()
 _reputation_store: dict[str, float] | None = None
 _learned_store: dict[str, float] | None = None
 
 
 def _get_reputation_store() -> dict[str, float]:
     global _reputation_store
-    if _reputation_store is None:
-        _reputation_store = load_reputation()
-    return _reputation_store
+    with _lock:
+        if _reputation_store is None:
+            _reputation_store = load_reputation()
+        return _reputation_store
 
 
 def _get_learned_store() -> dict[str, float]:
     global _learned_store
-    if _learned_store is None:
-        _learned_store = load_learned_scores()
-    return _learned_store
+    with _lock:
+        if _learned_store is None:
+            _learned_store = load_learned_scores()
+        return _learned_store
 
 
 def reload_reputation() -> None:
     """Force-reload reputation store from disk (call after update)."""
     global _reputation_store
-    _reputation_store = None
+    with _lock:
+        _reputation_store = None
 
 
 def reload_learned() -> None:
     """Force-reload learned scores from disk."""
     global _learned_store
-    _learned_store = None
+    with _lock:
+        _learned_store = None
 
 
 def score_expert(expert: ExpertProfile, task: str, profile: TaskProfile) -> float:

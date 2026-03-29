@@ -7,7 +7,7 @@ Strategy:
     signal = w_conf * confidence + w_rec * norm(recommendations) + w_risk * (1 - norm(risks))
 
   These per-expert scores are aggregated across traces (EMA) and stored in
-  outputs/.learned_scores.json.  The router calls `learned_bonus(key, profile)`
+  outputs/.learned_scores.json.  The router calls `learned_bonus(store, expert_key)`
   to get a small additive bonus (clamped to [-0.10, +0.10]).
 """
 from __future__ import annotations
@@ -41,8 +41,11 @@ def load_learned_scores(path: Path = _DEFAULT_PATH) -> dict[str, float]:
     if not path.exists():
         return {}
     try:
-        return json.loads(path.read_text(encoding="utf-8"))
-    except (json.JSONDecodeError, OSError):
+        raw = json.loads(path.read_text(encoding="utf-8"))
+        if not isinstance(raw, dict):
+            raise ValueError("expected dict")
+        return {str(k): float(v) for k, v in raw.items()}
+    except (json.JSONDecodeError, OSError, ValueError, TypeError):
         logger.warning("Corrupted learned scores at %s — resetting.", path)
         return {}
 
