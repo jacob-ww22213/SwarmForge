@@ -7,7 +7,14 @@ This project follows a lightweight SemVer-style versioning scheme while the prod
 - `PATCH`: bug fixes, documentation fixes, test-only changes, or small UX improvements
 
 Current version:
-- `0.6.4`
+- `0.6.5`
+
+## [0.6.5] - 2026-03-30
+
+Changed:
+- removed the distributed UI history task panel so the page focuses on current node onboarding, current run status, and the active task result only
+- stopped the browser from fetching and rendering saved task history during normal page refreshes
+- kept direct task execution and post-run rating intact while simplifying the console layout
 
 ## [0.6.4] - 2026-03-30
 

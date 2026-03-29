@@ -134,7 +134,7 @@
       }
       .stat .label { color: var(--muted); font-size: 12px; }
       .stat strong { display: block; margin-top: 8px; font-size: 28px; }
-      .worker-list, .task-list, .grid { display: grid; gap: 12px; }
+      .worker-list, .grid { display: grid; gap: 12px; }
       .chip {
         display: inline-block;
         padding: 4px 10px;
@@ -452,11 +452,6 @@
               </div>
             </div>
           </section>
-
-          <section class="panel">
-            <h2>历史任务</h2>
-            <div id="task-list" class="task-list"></div>
-          </section>
         </div>
 
         <div class="right">
@@ -477,7 +472,7 @@
     </div>
 
     <script>
-      const state = { workers: [], tasks: [], currentTask: null };
+      const state = { workers: [], currentTask: null };
 
       async function fetchJson(url, options = {}) {
         const response = await fetch(url, options);
@@ -581,7 +576,7 @@
         const cards = [
           { label: "在线节点", value: status.online_workers || 0 },
           { label: "已知节点", value: status.known_workers || 0 },
-          { label: "保存任务", value: status.tasks_saved || 0 },
+          { label: "接入模式", value: "用户自持节点" },
           { label: "调度策略", value: status.dispatch_policy || "moe-top-k + moa-two-round" },
         ];
         document.querySelector("#stats").innerHTML = cards.map((card) => `
@@ -612,24 +607,6 @@
             <div class="meta" style="margin-top:10px;">
               已安装模型：${escapeHtml((worker.models_available || []).join(", ") || worker.model || "-")}
             </div>
-          </article>
-        `).join("");
-      }
-
-      function renderTasks() {
-        const taskList = document.querySelector("#task-list");
-        if (!state.tasks.length) {
-          taskList.innerHTML = `<div class="meta">还没有历史任务。</div>`;
-          return;
-        }
-        taskList.innerHTML = state.tasks.map((task) => `
-          <article class="task-card" onclick="loadTask('${escapeHtml(task.task_id)}')">
-            <div style="display:flex;justify-content:space-between;gap:12px;align-items:flex-start;">
-              <h4>${escapeHtml(task.task_id)}</h4>
-            </div>
-            <div class="meta">${escapeHtml(formatTime(task.created_at))}</div>
-            <div class="meta">完成 ${escapeHtml(task.completed_worker_count || 0)} / ${escapeHtml(task.online_worker_count || 0)} 个 worker</div>
-            <p>${escapeHtml(task.task_preview || "")}</p>
           </article>
         `).join("");
       }
@@ -700,16 +677,13 @@
       }
 
       async function refreshAll() {
-        const [status, workers, tasks] = await Promise.all([
+        const [status, workers] = await Promise.all([
           fetchJson("/api/controller/status"),
           fetchJson("/api/workers"),
-          fetchJson("/api/tasks"),
         ]);
         renderStats(status);
         state.workers = workers.workers || [];
-        state.tasks = tasks.tasks || [];
         renderWorkers();
-        renderTasks();
       }
 
       async function runTask() {
@@ -735,11 +709,6 @@
         } catch (error) {
           document.querySelector("#run-status").textContent = error.message || "运行失败";
         }
-      }
-
-      async function loadTask(taskId) {
-        const task = await fetchJson(`/api/tasks/${encodeURIComponent(taskId)}`);
-        renderTaskDetail(task);
       }
 
       async function copyText(value, successText) {
