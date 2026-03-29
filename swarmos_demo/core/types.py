@@ -3,7 +3,7 @@ from __future__ import annotations
 import re
 from dataclasses import dataclass
 from pathlib import Path
-from typing import TypedDict
+from typing import Any, TypedDict
 
 
 # ---------------------------------------------------------------------------
@@ -24,7 +24,7 @@ class CritiqueReport(TypedDict):
     next_checks: list[str]
 
 
-class AggregateResult(TypedDict):
+class _AggregateResultRequired(TypedDict):
     selected_experts: list[str]
     consensus: list[str]
     critique_focus: list[str]
@@ -33,11 +33,62 @@ class AggregateResult(TypedDict):
     final_summary: str
 
 
+class AggregateResult(_AggregateResultRequired, total=False):
+    weighted_ranking: list[dict[str, Any]]
+
+
 class BaselineResult(TypedDict):
     summary: str
     recommendations: list[str]
     risks: list[str]
     confidence: float
+
+
+class _WorkflowTraceRequired(TypedDict):
+    run_id: str
+    timestamp: str
+    task: str
+    provider: str
+    profile: TaskProfile
+    routed: list[dict[str, Any]]
+    proposals: list[dict[str, Any]]
+    critique: CritiqueReport
+    aggregate: AggregateResult
+
+
+class TaskRequest(TypedDict, total=False):
+    """Formal request structure matching 03_模块对接文档 §3.1."""
+    task: str
+    provider: str
+    top_k: int
+    baseline: bool
+    save_markdown: str
+    save_json: str
+    update_reputation: bool
+    learn: bool
+    budget: float
+
+
+class CostSummary(TypedDict, total=False):
+    total_tokens: int
+    prompt_tokens: int
+    completion_tokens: int
+    estimated_cost_usd: float
+    per_expert: dict[str, Any]
+
+
+class WorkflowTrace(_WorkflowTraceRequired, total=False):
+    """Formal trace structure matching 03_模块对接文档 §3.8.
+
+    Required keys are in _WorkflowTraceRequired; optional keys here.
+    """
+    baseline: BaselineResult
+    round: int
+    user_feedback: str
+    duration_ms: int
+    errors: list[str]
+    cost: CostSummary
+    conflicts: list[dict[str, Any]]
 
 
 # ---------------------------------------------------------------------------
@@ -59,6 +110,9 @@ class ExpertProfile:
     role: str
     keywords: tuple[str, ...]
     bias: float = 0.0
+    temperature: float = 0.2
+    max_tokens: int = 512
+    system_prompt: str = ""
 
 
 @dataclass

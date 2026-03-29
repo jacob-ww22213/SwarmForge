@@ -24,6 +24,8 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--top-k", type=int, default=3, help="Number of non-planner experts to route to.")
     parser.add_argument("--baseline", action="store_true", help="Also run a single-model baseline for comparison.")
     parser.add_argument("--update-reputation", action="store_true", help="Update expert reputation scores after this run.")
+    parser.add_argument("--learn", action="store_true", help="Rebuild learned routing scores from all saved traces.")
+    parser.add_argument("--budget", type=float, default=None, help="Max estimated cost in USD. Low-value experts are skipped when budget is tight.")
     parser.add_argument("--save-markdown", help="Write the markdown report to this path.")
     parser.add_argument("--save-json", help="Write the JSON trace to this path.")
     return parser.parse_args()
@@ -38,6 +40,13 @@ def main() -> int:
         return 1
 
     print(result["console_report"])
+
+    if getattr(args, "learn", False):
+        from core.learned_router import update_learned_scores
+        from core.router import reload_learned
+        scores = update_learned_scores()
+        reload_learned()
+        print(f"\nLearned routing scores updated ({len(scores)} experts).")
 
     if args.save_markdown:
         save_markdown(args.save_markdown, result["markdown_report"])

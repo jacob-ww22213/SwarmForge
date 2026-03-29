@@ -5,9 +5,9 @@
 
 ## Routed Experts
 - `planner` / Planner: score=0.680
-- `research_scientist` / Research Scientist: score=0.760
-- `coding_engineer` / Coding Engineer: score=0.640
-- `product_strategist` / Product Strategist: score=0.500
+- `research_scientist` / Research Scientist: score=0.775
+- `coding_engineer` / Coding Engineer: score=0.645
+- `product_strategist` / Product Strategist: score=0.505
 
 ## Expert Proposals
 ### Planner

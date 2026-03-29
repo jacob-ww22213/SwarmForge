@@ -5,9 +5,9 @@
 
 ## Routed Experts
 - `planner` / Planner: score=0.680
-- `product_strategist` / Product Strategist: score=0.780
-- `coding_engineer` / Coding Engineer: score=0.640
-- `research_scientist` / Research Scientist: score=0.560
+- `product_strategist` / Product Strategist: score=0.796
+- `coding_engineer` / Coding Engineer: score=0.644
+- `research_scientist` / Research Scientist: score=0.572
 
 ## Expert Proposals
 ### Planner
@@ -54,7 +54,7 @@ Risks:
 - 如果一边重构一边改输出协议，联调阶段会非常痛苦。
 ### Research Scientist
 - Role: Focuses on baselines, experiments, evaluation, and ablations.
-- Confidence: 0.83
+- Confidence: 0.84
 - Summary: 如果想判断 demo 有没有价值，必须同时保存基线、路由结果、协作收益和失败模式。
 
 Recommendations:

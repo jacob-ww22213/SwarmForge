@@ -1,0 +1,571 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SwarmOS Demo</title>
+<style>
+:root {
+  --bg: #0d1117;
+  --bg-card: #161b22;
+  --bg-input: #0d1117;
+  --border: #30363d;
+  --text: #e6edf3;
+  --text-dim: #8b949e;
+  --accent: #00d4aa;
+  --accent-dim: #00d4aa33;
+  --warn: #f0883e;
+  --danger: #f85149;
+  --info: #58a6ff;
+  --radius: 10px;
+  --shadow: 0 2px 12px rgba(0,0,0,.4);
+}
+* { margin:0; padding:0; box-sizing:border-box; }
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif;
+  background: var(--bg); color: var(--text); line-height: 1.6;
+  display: flex; height: 100vh; overflow: hidden;
+}
+/* Sidebar */
+.sidebar {
+  width: 220px; min-width: 220px; background: var(--bg-card);
+  border-right: 1px solid var(--border); display: flex; flex-direction: column;
+  padding: 20px 0;
+}
+.sidebar h1 { font-size: 18px; padding: 0 20px 20px; color: var(--accent); font-weight: 700; letter-spacing: .5px; }
+.sidebar h1 span { color: var(--text-dim); font-weight: 400; font-size: 12px; display: block; margin-top: 2px; }
+.nav-item {
+  padding: 10px 20px; cursor: pointer; font-size: 14px; color: var(--text-dim);
+  transition: all .15s; border-left: 3px solid transparent;
+}
+.nav-item:hover { color: var(--text); background: rgba(255,255,255,.03); }
+.nav-item.active { color: var(--accent); border-left-color: var(--accent); background: var(--accent-dim); }
+.sidebar-footer { margin-top: auto; padding: 16px 20px; font-size: 11px; color: var(--text-dim); }
+
+/* Main */
+.main { flex: 1; overflow-y: auto; padding: 32px 40px; }
+.view { display: none; animation: fadeIn .25s; }
+.view.active { display: block; }
+@keyframes fadeIn { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: translateY(0); } }
+
+h2 { font-size: 22px; margin-bottom: 20px; font-weight: 600; }
+h3 { font-size: 16px; margin: 18px 0 10px; color: var(--accent); font-weight: 600; }
+
+/* Card */
+.card {
+  background: var(--bg-card); border: 1px solid var(--border); border-radius: var(--radius);
+  padding: 20px; margin-bottom: 16px; box-shadow: var(--shadow);
+}
+.card-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; }
+.card-header .title { font-weight: 600; font-size: 15px; }
+
+/* Inputs */
+input[type="text"], textarea, select {
+  width: 100%; padding: 10px 14px; background: var(--bg-input);
+  border: 1px solid var(--border); border-radius: 8px; color: var(--text);
+  font-size: 14px; outline: none; transition: border .2s;
+}
+input:focus, textarea:focus { border-color: var(--accent); }
+textarea { resize: vertical; min-height: 80px; font-family: inherit; }
+label { font-size: 13px; color: var(--text-dim); display: block; margin-bottom: 6px; }
+
+/* Button */
+.btn {
+  padding: 10px 24px; border: none; border-radius: 8px; font-size: 14px;
+  cursor: pointer; font-weight: 600; transition: all .2s; display: inline-flex; align-items: center; gap: 6px;
+}
+.btn-primary { background: var(--accent); color: #000; }
+.btn-primary:hover { filter: brightness(1.15); }
+.btn-primary:disabled { opacity: .5; cursor: not-allowed; }
+.btn-secondary { background: transparent; color: var(--text-dim); border: 1px solid var(--border); }
+.btn-secondary:hover { border-color: var(--text-dim); color: var(--text); }
+.btn-danger { background: var(--danger); color: #fff; }
+.btn-sm { padding: 6px 14px; font-size: 12px; }
+
+/* Form row */
+.form-row { display: flex; gap: 12px; margin-bottom: 14px; align-items: flex-end; }
+.form-row .field { flex: 1; }
+.form-row .field-sm { width: 120px; flex: none; }
+
+/* Checkbox */
+.checkbox-label { display: inline-flex; align-items: center; gap: 6px; font-size: 13px; color: var(--text-dim); cursor: pointer; }
+.checkbox-label input { accent-color: var(--accent); }
+
+/* Tags */
+.tag {
+  display: inline-block; padding: 2px 10px; border-radius: 12px; font-size: 11px;
+  font-weight: 600; margin-right: 4px;
+}
+.tag-accent { background: var(--accent-dim); color: var(--accent); }
+.tag-warn { background: rgba(240,136,62,.15); color: var(--warn); }
+.tag-info { background: rgba(88,166,255,.15); color: var(--info); }
+
+/* Score bar */
+.score-bar { height: 6px; background: var(--border); border-radius: 3px; overflow: hidden; margin-top: 4px; }
+.score-bar-fill { height: 100%; background: var(--accent); border-radius: 3px; transition: width .6s ease; }
+
+/* Step indicator */
+.steps { display: flex; gap: 0; margin-bottom: 24px; }
+.step {
+  flex: 1; text-align: center; padding: 10px 0; font-size: 12px; font-weight: 600;
+  color: var(--text-dim); position: relative; border-bottom: 2px solid var(--border);
+  transition: all .3s;
+}
+.step.done { color: var(--accent); border-bottom-color: var(--accent); }
+.step.active { color: var(--text); border-bottom-color: var(--info); }
+
+/* Expert card grid */
+.expert-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 12px; }
+
+/* Trace list */
+.trace-item {
+  padding: 14px 18px; border: 1px solid var(--border); border-radius: var(--radius);
+  margin-bottom: 8px; cursor: pointer; transition: all .15s; background: var(--bg-card);
+}
+.trace-item:hover { border-color: var(--accent); }
+.trace-item .meta { font-size: 12px; color: var(--text-dim); margin-top: 4px; }
+
+/* Table */
+table { width: 100%; border-collapse: collapse; font-size: 13px; }
+th, td { text-align: left; padding: 8px 12px; border-bottom: 1px solid var(--border); }
+th { color: var(--text-dim); font-weight: 600; font-size: 12px; text-transform: uppercase; letter-spacing: .5px; }
+
+/* Spinner */
+.spinner { display: inline-block; width: 18px; height: 18px; border: 2px solid var(--border); border-top-color: var(--accent); border-radius: 50%; animation: spin .6s linear infinite; }
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* Multi-round chat */
+.chat-messages { max-height: 60vh; overflow-y: auto; padding-right: 8px; }
+.chat-bubble {
+  padding: 14px 18px; border-radius: var(--radius); margin-bottom: 12px;
+  max-width: 85%; animation: fadeIn .2s;
+}
+.chat-bubble.system { background: var(--bg-card); border: 1px solid var(--border); margin-left: auto; margin-right: auto; max-width: 100%; }
+.chat-bubble.user { background: rgba(88,166,255,.1); border: 1px solid rgba(88,166,255,.2); margin-left: auto; }
+.chat-bubble .round-tag { font-size: 11px; font-weight: 700; color: var(--accent); margin-bottom: 6px; }
+.chat-input-row { display: flex; gap: 8px; margin-top: 14px; }
+.chat-input-row input { flex: 1; }
+
+/* Comparison table */
+.cmp-better { color: var(--accent); font-weight: 600; }
+.cmp-worse { color: var(--danger); }
+
+/* Scrollbar */
+::-webkit-scrollbar { width: 6px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: var(--text-dim); }
+
+/* Replay step-by-step */
+.replay-step { opacity: .3; transition: opacity .3s; margin-bottom: 12px; }
+.replay-step.visible { opacity: 1; }
+</style>
+</head>
+<body>
+
+<aside class="sidebar">
+  <h1>SwarmOS <span>Multi-Expert Demo</span></h1>
+  <div class="nav-item active" data-view="run">&#9654; 运行任务</div>
+  <div class="nav-item" data-view="traces">&#128203; 任务回放</div>
+  <div class="nav-item" data-view="multi">&#128257; 多轮协作</div>
+  <div class="sidebar-footer"><span id="provider-tag">mock</span> &middot; stdlib</div>
+</aside>
+
+<main class="main">
+  <!-- ==================== VIEW: Run ==================== -->
+  <section id="view-run" class="view active">
+    <h2>运行任务</h2>
+    <div class="card">
+      <div class="form-row">
+        <div class="field">
+          <label>任务描述</label>
+          <textarea id="run-task" placeholder="例如：设计一个高并发的短链服务，支持自定义域名…"></textarea>
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="field-sm">
+          <label>专家数 top-k</label>
+          <input type="text" id="run-topk" value="3">
+        </div>
+        <div class="field" style="display:flex;align-items:flex-end;gap:16px;padding-bottom:2px;">
+          <label class="checkbox-label"><input type="checkbox" id="run-baseline"> 基线对比</label>
+          <label class="checkbox-label"><input type="checkbox" id="run-save"> 保存 trace</label>
+        </div>
+        <div style="display:flex;align-items:flex-end;">
+          <button class="btn btn-primary" id="run-btn" onclick="runTask()">运行</button>
+        </div>
+      </div>
+    </div>
+
+    <div id="run-steps" class="steps" style="display:none;">
+      <div class="step" data-step="parse">解析任务</div>
+      <div class="step" data-step="route">路由专家</div>
+      <div class="step" data-step="propose">专家提案</div>
+      <div class="step" data-step="critique">批判审查</div>
+      <div class="step" data-step="aggregate">共识聚合</div>
+      <div class="step" data-step="baseline">基线对比</div>
+    </div>
+
+    <div id="run-result"></div>
+  </section>
+
+  <!-- ==================== VIEW: Traces ==================== -->
+  <section id="view-traces" class="view">
+    <h2>任务回放</h2>
+    <div id="trace-list-area">
+      <p style="color:var(--text-dim);">加载中…</p>
+    </div>
+    <div id="trace-detail" style="display:none;"></div>
+  </section>
+
+  <!-- ==================== VIEW: Multi-round ==================== -->
+  <section id="view-multi" class="view">
+    <h2>多轮协作</h2>
+    <div class="card" id="multi-init" >
+      <label>初始任务</label>
+      <textarea id="multi-task" placeholder="输入你的初始任务…"></textarea>
+      <div style="margin-top:12px;">
+        <button class="btn btn-primary" onclick="multiStart()">开始多轮协作</button>
+      </div>
+    </div>
+    <div id="multi-chat" style="display:none;">
+      <div class="chat-messages" id="multi-messages"></div>
+      <div class="chat-input-row">
+        <input type="text" id="multi-input" placeholder="输入追问或反馈… (留空直接结束)" onkeydown="if(event.key==='Enter')multiNext()">
+        <button class="btn btn-primary btn-sm" onclick="multiNext()">继续</button>
+        <button class="btn btn-secondary btn-sm" onclick="multiEnd()">结束</button>
+      </div>
+    </div>
+  </section>
+</main>
+
+<script>
+/* ========== Init ========== */
+api('/api/status').then(s => {
+  if(s && s.provider) document.getElementById('provider-tag').textContent = s.provider;
+}).catch(()=>{});
+
+/* ========== Navigation ========== */
+document.querySelectorAll('.nav-item').forEach(el => {
+  el.addEventListener('click', () => {
+    document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+    document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+    el.classList.add('active');
+    document.getElementById('view-' + el.dataset.view).classList.add('active');
+    if (el.dataset.view === 'traces') loadTraceList();
+  });
+});
+
+/* ========== Helpers ========== */
+function h(s) { return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+function pct(v) { return Math.round(v * 100); }
+async function api(path, body) {
+  const opts = body ? { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify(body) } : {};
+  const res = await fetch(path, opts);
+  return res.json();
+}
+
+/* ========== Run Task ========== */
+async function runTask() {
+  const task = document.getElementById('run-task').value.trim();
+  if (!task) return;
+  const topk = parseInt(document.getElementById('run-topk').value) || 3;
+  const baseline = document.getElementById('run-baseline').checked;
+  const save = document.getElementById('run-save').checked;
+  const btn = document.getElementById('run-btn');
+  btn.disabled = true; btn.innerHTML = '<span class="spinner"></span> 运行中';
+
+  const stepsEl = document.getElementById('run-steps');
+  stepsEl.style.display = 'flex';
+  const steps = stepsEl.querySelectorAll('.step');
+  steps.forEach(s => { s.classList.remove('done','active'); });
+
+  const stepNames = ['parse','route','propose','critique','aggregate'];
+  if (baseline) stepNames.push('baseline');
+
+  let i = 0;
+  const tick = setInterval(() => {
+    if (i > 0) steps[i-1].classList.remove('active'); steps[i-1] && steps[i-1].classList.add('done');
+    if (i < steps.length) steps[i].classList.add('active');
+    i++;
+    if (i > steps.length) clearInterval(tick);
+  }, 350);
+
+  try {
+    const trace = await api('/api/run', { task, top_k: topk, baseline, save });
+    clearInterval(tick);
+    steps.forEach(s => { s.classList.remove('active'); s.classList.add('done'); });
+    renderRunResult(trace);
+  } catch(e) {
+    clearInterval(tick);
+    document.getElementById('run-result').innerHTML = `<div class="card" style="border-color:var(--danger);">错误: ${h(e.message)}</div>`;
+  }
+  btn.disabled = false; btn.innerHTML = '运行';
+}
+
+function renderRunResult(t) {
+  let html = '';
+
+  /* Profile */
+  html += `<h3>任务画像</h3><div class="card">
+    <span class="tag tag-info">${h(t.profile.language)}</span>
+    <span class="tag tag-accent">${h(t.profile.risk_level)}</span>
+    ${t.profile.domains.map(d => `<span class="tag tag-warn">${h(d)}</span>`).join('')}
+    <div style="margin-top:8px;font-size:13px;color:var(--text-dim);">
+      行为: ${t.profile.actions.join(', ')} &nbsp;|&nbsp; demo 相关: ${t.profile.mentions_demo ? '是' : '否'}
+    </div></div>`;
+
+  /* Routed */
+  html += `<h3>路由专家 (${t.routed.length})</h3><div class="expert-grid">`;
+  for (const r of t.routed) {
+    html += `<div class="card">
+      <div class="card-header"><span class="title">${h(r.name)}</span><span class="tag tag-accent">${pct(r.score)}%</span></div>
+      <div class="score-bar"><div class="score-bar-fill" style="width:${pct(r.score)}%"></div></div>
+    </div>`;
+  }
+  html += `</div>`;
+
+  /* Proposals */
+  html += `<h3>专家提案</h3><div class="expert-grid">`;
+  for (const p of t.proposals) {
+    html += `<div class="card">
+      <div class="card-header"><span class="title">${h(p.expert_name)}</span><span class="tag tag-info">${pct(p.confidence)}%</span></div>
+      <div style="font-size:13px;margin-bottom:8px;">${h(p.summary)}</div>
+      <div style="font-size:12px;color:var(--text-dim);">
+        <strong>建议:</strong> ${p.recommendations.map(r=>'<br>· '+h(r)).join('')}
+      </div>
+      <div style="font-size:12px;color:var(--warn);margin-top:6px;">
+        <strong>风险:</strong> ${p.risks.map(r=>'<br>· '+h(r)).join('')}
+      </div>
+    </div>`;
+  }
+  html += `</div>`;
+
+  /* Critique */
+  html += `<h3>批判审查</h3><div class="card">
+    <div style="font-size:13px;">
+      <strong>关注点:</strong> ${t.critique.focus.join('; ')}<br>
+      <strong>重复项:</strong> ${t.critique.duplicates.join('; ') || '无'}<br>
+      <strong>待检查:</strong> ${t.critique.next_checks.join('; ')}
+    </div></div>`;
+
+  /* Aggregate */
+  const a = t.aggregate;
+  html += `<h3>共识聚合</h3><div class="card">
+    <div style="font-size:14px;font-weight:600;margin-bottom:8px;">${h(a.final_summary)}</div>
+    <table><tr><th>共识</th><th>下一步</th><th>关键风险</th></tr><tr>
+      <td>${a.consensus.map(c=>'· '+h(c)).join('<br>')}</td>
+      <td>${a.next_steps.map(c=>'· '+h(c)).join('<br>')}</td>
+      <td>${a.key_risks.map(c=>'· '+h(c)).join('<br>')}</td>
+    </tr></table>`;
+  if (a.weighted_ranking && a.weighted_ranking.length) {
+    html += `<div style="margin-top:12px;"><strong style="font-size:12px;color:var(--text-dim);">置信度×信誉 加权排名:</strong><table>
+      <tr><th>专家</th><th>信心</th><th>信誉</th><th>综合权重</th></tr>
+      ${a.weighted_ranking.map(w => `<tr><td>${h(w.expert_name)}</td><td>${pct(w.confidence)}%</td><td>${pct(w.reputation)}%</td><td class="cmp-better">${(w.weight*100).toFixed(1)}%</td></tr>`).join('')}
+    </table></div>`;
+  }
+  html += `</div>`;
+
+  /* Baseline */
+  if (t.baseline) {
+    const b = t.baseline;
+    const avgConf = t.proposals.reduce((s,p)=>s+p.confidence,0)/t.proposals.length;
+    const multiRec = t.proposals.reduce((s,p)=>s+p.recommendations.length,0);
+    html += `<h3>基线对比</h3><div class="card">
+      <div style="font-size:13px;margin-bottom:10px;">${h(b.summary)}</div>
+      <table>
+        <tr><th>指标</th><th>多专家</th><th>基线(单模型)</th></tr>
+        <tr><td>建议数</td><td class="${multiRec>b.recommendations.length?'cmp-better':'cmp-worse'}">${multiRec}</td><td>${b.recommendations.length}</td></tr>
+        <tr><td>平均信心</td><td class="${avgConf>b.confidence?'cmp-better':'cmp-worse'}">${pct(avgConf)}%</td><td>${pct(b.confidence)}%</td></tr>
+        <tr><td>风险数</td><td>${t.proposals.reduce((s,p)=>s+p.risks.length,0)}</td><td>${b.risks.length}</td></tr>
+      </table></div>`;
+  }
+
+  /* Cost */
+  if (t.cost) {
+    const c = t.cost;
+    html += `<h3>成本追踪</h3><div class="card"><table>
+      <tr><th>指标</th><th>值</th></tr>
+      <tr><td>总 token</td><td>${c.total_tokens}</td></tr>
+      <tr><td>Prompt tokens</td><td>${c.prompt_tokens}</td></tr>
+      <tr><td>Completion tokens</td><td>${c.completion_tokens}</td></tr>
+      <tr><td>估算费用</td><td>$${c.estimated_cost_usd}</td></tr>
+    </table>`;
+    if (c.per_expert) {
+      html += `<div style="margin-top:8px;font-size:12px;color:var(--text-dim);">`;
+      for (const [k,v] of Object.entries(c.per_expert)) {
+        html += `${h(k)}: ${v.prompt_tokens}+${v.completion_tokens} tok, $${v.estimated_cost_usd} &nbsp;`;
+      }
+      html += `</div>`;
+    }
+    html += `</div>`;
+  }
+
+  /* Conflicts */
+  if (t.conflicts && t.conflicts.length) {
+    html += `<h3>冲突检测</h3>`;
+    for (const c of t.conflicts) {
+      html += `<div class="card" style="border-color:var(--warn);">
+        <span class="tag tag-warn">${h(c.type)}</span>
+        <div style="font-size:13px;margin-top:6px;">${h(c.description)}</div>
+        <div style="font-size:12px;color:var(--text-dim);margin-top:4px;">专家: ${c.experts.map(e=>h(e)).join(' vs ')}</div>
+      </div>`;
+    }
+  }
+
+  /* Duration + errors + save info */
+  const meta = [];
+  if (t.duration_ms != null) meta.push(`耗时 ${t.duration_ms}ms`);
+  if (t._saved_to) meta.push(`已保存: outputs/${h(t._saved_to)}`);
+  if (t.provider) meta.push(`provider: ${h(t.provider)}`);
+  if (meta.length) html += `<div style="margin-top:12px;font-size:12px;color:var(--text-dim);">${meta.join(' · ')}</div>`;
+  if (t.errors && t.errors.length) {
+    html += `<div class="card" style="border-color:var(--warn);margin-top:12px;font-size:13px;"><strong style="color:var(--warn);">部分失败:</strong><br>${t.errors.map(e=>'· '+h(e)).join('<br>')}</div>`;
+  }
+
+  document.getElementById('run-result').innerHTML = html;
+}
+
+/* ========== Trace List ========== */
+async function loadTraceList() {
+  const area = document.getElementById('trace-list-area');
+  const detail = document.getElementById('trace-detail');
+  detail.style.display = 'none';
+  area.style.display = 'block';
+
+  const traces = await api('/api/traces');
+  if (!traces.length) { area.innerHTML = '<p style="color:var(--text-dim);">暂无保存的 trace。运行任务时勾选"保存 trace"即可。</p>'; return; }
+
+  area.innerHTML = traces.map(t => `
+    <div class="trace-item" onclick="loadTrace('${h(t.file)}')">
+      <div style="font-weight:600;font-size:14px;">${h(t.task)}</div>
+      <div class="meta">
+        <span class="tag tag-info">${h(t.provider)}</span>
+        <span class="tag tag-accent">${t.expert_count} 专家</span>
+        ${t.has_baseline ? '<span class="tag tag-warn">含基线</span>' : ''}
+        &nbsp; ${h(t.timestamp)} &nbsp; run_id: ${h(t.run_id)}
+      </div>
+    </div>`).join('');
+}
+
+async function loadTrace(file) {
+  const area = document.getElementById('trace-list-area');
+  const detail = document.getElementById('trace-detail');
+  area.style.display = 'none';
+  detail.style.display = 'block';
+
+  const t = await api('/api/traces/' + file);
+  if (t.error) { detail.innerHTML = `<div class="card" style="border-color:var(--danger);">加载失败</div>`; return; }
+
+  let html = `<button class="btn btn-secondary btn-sm" onclick="loadTraceList()" style="margin-bottom:16px;">&larr; 返回列表</button>`;
+  html += `<h3 style="margin-top:0;">任务回放 — ${h(t.run_id)}</h3>`;
+
+  const stepData = [
+    { title: '任务画像', render: () => `<span class="tag tag-info">${h(t.profile.language)}</span> <span class="tag tag-accent">${h(t.profile.risk_level)}</span> ${t.profile.domains.map(d=>'<span class="tag tag-warn">'+h(d)+'</span>').join('')}` },
+    { title: '路由专家', render: () => t.routed.map(r => `<div style="display:flex;justify-content:space-between;align-items:center;padding:4px 0;"><span>${h(r.name)}</span><span class="tag tag-accent">${pct(r.score)}%</span></div><div class="score-bar"><div class="score-bar-fill" style="width:${pct(r.score)}%"></div></div>`).join('') },
+    { title: '专家提案', render: () => t.proposals.map(p => `<div style="margin-bottom:12px;padding-bottom:12px;border-bottom:1px solid var(--border);"><strong>${h(p.expert_name)}</strong> <span class="tag tag-info">${pct(p.confidence)}%</span><div style="font-size:13px;margin-top:4px;">${h(p.summary)}</div></div>`).join('') },
+    { title: '批判审查', render: () => `<strong>关注点:</strong> ${t.critique.focus.join('; ')}<br><strong>重复:</strong> ${t.critique.duplicates.join('; ')||'无'}<br><strong>待查:</strong> ${t.critique.next_checks.join('; ')}` },
+    { title: '共识聚合', render: () => `<div style="font-weight:600;margin-bottom:6px;">${h(t.aggregate.final_summary)}</div>共识: ${t.aggregate.consensus.join('; ')}<br>下一步: ${t.aggregate.next_steps.join('; ')}<br>风险: ${t.aggregate.key_risks.join('; ')}` },
+  ];
+  if (t.baseline) {
+    stepData.push({ title: '基线对比', render: () => `${h(t.baseline.summary)}<br>建议: ${t.baseline.recommendations.join('; ')}<br>信心: ${pct(t.baseline.confidence)}%` });
+  }
+
+  html += `<div style="margin-bottom:14px;"><button class="btn btn-primary btn-sm" onclick="replaySteps()">逐步回放</button></div>`;
+
+  for (let i = 0; i < stepData.length; i++) {
+    html += `<div class="replay-step card" id="replay-${i}"><div class="card-header"><span class="title">${stepData[i].title}</span><span class="tag tag-info">步骤 ${i+1}</span></div><div style="font-size:13px;">${stepData[i].render()}</div></div>`;
+  }
+
+  detail.innerHTML = html;
+  detail.dataset.stepCount = stepData.length;
+}
+
+function replaySteps() {
+  const count = parseInt(document.getElementById('trace-detail').dataset.stepCount || 0);
+  for (let i = 0; i < count; i++) {
+    const el = document.getElementById('replay-' + i);
+    el.classList.remove('visible');
+  }
+  for (let i = 0; i < count; i++) {
+    setTimeout(() => document.getElementById('replay-' + i).classList.add('visible'), (i + 1) * 500);
+  }
+}
+
+/* ========== Multi-round ========== */
+let multiState = { task: '', history: [], running: false };
+
+async function multiStart() {
+  const task = document.getElementById('multi-task').value.trim();
+  if (!task) return;
+  multiState = { task, history: [], running: true };
+  document.getElementById('multi-init').style.display = 'none';
+  document.getElementById('multi-chat').style.display = 'block';
+  document.getElementById('multi-messages').innerHTML = '';
+  addChatBubble('user', `初始任务: ${task}`);
+  await multiRound('');
+}
+
+async function multiNext() {
+  if (multiState.running) return;
+  const input = document.getElementById('multi-input');
+  const feedback = input.value.trim();
+  input.value = '';
+  if (!feedback) { multiEnd(); return; }
+  addChatBubble('user', feedback);
+  await multiRound(feedback);
+}
+
+async function multiRound(feedback) {
+  multiState.running = true;
+  const loadId = addChatBubble('system', '<span class="spinner"></span> 第 ' + (multiState.history.length+1) + ' 轮分析中…');
+
+  const trace = await api('/api/multi-round', {
+    task: multiState.task,
+    history: multiState.history,
+    feedback,
+    top_k: 3,
+  });
+  multiState.history.push(trace);
+  multiState.running = false;
+
+  document.getElementById(loadId).outerHTML = renderRoundBubble(trace);
+  document.getElementById('multi-messages').scrollTop = 999999;
+}
+
+function multiEnd() {
+  addChatBubble('system', `<strong>协作结束</strong> — 共完成 ${multiState.history.length} 轮。`);
+  document.getElementById('multi-input').disabled = true;
+  document.querySelectorAll('#multi-chat .btn').forEach(b => b.disabled = true);
+}
+
+let bubbleId = 0;
+function addChatBubble(type, html) {
+  const id = 'bubble-' + (bubbleId++);
+  const el = document.getElementById('multi-messages');
+  el.insertAdjacentHTML('beforeend', `<div class="chat-bubble ${type}" id="${id}">${html}</div>`);
+  el.scrollTop = 999999;
+  return id;
+}
+
+function renderRoundBubble(t) {
+  const experts = t.routed.map(r => r.name).join(', ');
+  const proposals = t.proposals.map(p =>
+    `<div style="margin:6px 0;padding:8px;background:rgba(255,255,255,.03);border-radius:6px;">
+      <strong>${h(p.expert_name)}</strong> <span class="tag tag-info">${pct(p.confidence)}%</span>
+      <div style="font-size:12px;margin-top:4px;">${h(p.summary)}</div>
+    </div>`
+  ).join('');
+
+  return `<div class="chat-bubble system">
+    <div class="round-tag">第 ${t.round} 轮</div>
+    <div style="font-size:12px;color:var(--text-dim);margin-bottom:8px;">路由: ${h(experts)}</div>
+    ${proposals}
+    <div style="margin-top:10px;padding-top:10px;border-top:1px solid var(--border);">
+      <strong style="font-size:13px;">共识:</strong> <span style="font-size:13px;">${h(t.aggregate.final_summary)}</span>
+    </div>
+  </div>`;
+}
+</script>
+</body>
+</html>

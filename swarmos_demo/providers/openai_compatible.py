@@ -1,13 +1,40 @@
 from __future__ import annotations
 
 import json
+import logging
 import textwrap
+import time
 import urllib.error
 import urllib.request
+from http.client import RemoteDisconnected
 from typing import Any
 
-from core.types import ExpertProfile, ExpertProposal, clamp
+from core.types import (
+    AggregateResult,
+    BaselineResult,
+    CritiqueReport,
+    ExpertProfile,
+    ExpertProposal,
+    clamp,
+)
 from providers.base import BaseProvider, ProviderError
+
+from core.config import (
+    PROVIDER_BASE_BACKOFF_S as _BASE_BACKOFF_S,
+    PROVIDER_MAX_RETRIES as _MAX_RETRIES,
+    PROVIDER_REQUEST_TIMEOUT_S as _REQUEST_TIMEOUT_S,
+)
+
+logger = logging.getLogger(__name__)
+
+
+def _is_retryable(exc: Exception) -> bool:
+    """Decide if an HTTP error warrants a retry (429, 5xx, transient)."""
+    if isinstance(exc, urllib.error.HTTPError):
+        return exc.code == 429 or exc.code >= 500
+    if isinstance(exc, (urllib.error.URLError, RemoteDisconnected, TimeoutError, ConnectionError)):
+        return True
+    return False
 
 
 class OpenAICompatibleProvider(BaseProvider):
@@ -18,38 +45,68 @@ class OpenAICompatibleProvider(BaseProvider):
         self.api_key = api_key
         self.model = model
 
-    def _chat(self, system_prompt: str, user_prompt: str) -> str:
+    def _chat(
+        self,
+        system_prompt: str,
+        user_prompt: str,
+        *,
+        temperature: float = 0.2,
+        max_tokens: int = 512,
+    ) -> tuple[str, dict[str, int]]:
+        """Returns (content, usage_dict). usage_dict may be empty if provider omits it."""
         endpoint = f"{self.base_url}/chat/completions"
-        payload = {
+        payload: dict[str, Any] = {
             "model": self.model,
             "messages": [
                 {"role": "system", "content": system_prompt},
                 {"role": "user", "content": user_prompt},
             ],
-            "temperature": 0.2,
+            "temperature": temperature,
+            "max_tokens": max_tokens,
         }
-        request = urllib.request.Request(
-            endpoint,
-            data=json.dumps(payload).encode("utf-8"),
-            headers={
-                "Content-Type": "application/json",
-                "Authorization": f"Bearer {self.api_key}",
-            },
-            method="POST",
-        )
-        try:
-            with urllib.request.urlopen(request, timeout=60) as response:
-                body = json.loads(response.read().decode("utf-8"))
-        except urllib.error.URLError as exc:
-            raise ProviderError(f"OpenAI-compatible request failed: {exc}") from exc
+        last_exc: Exception | None = None
+        for attempt in range(_MAX_RETRIES):
+            request = urllib.request.Request(
+                endpoint,
+                data=json.dumps(payload).encode("utf-8"),
+                headers={
+                    "Content-Type": "application/json",
+                    "Authorization": f"Bearer {self.api_key}",
+                },
+                method="POST",
+            )
+            try:
+                with urllib.request.urlopen(request, timeout=_REQUEST_TIMEOUT_S) as response:
+                    body = json.loads(response.read().decode("utf-8"))
+                try:
+                    content = body["choices"][0]["message"]["content"].strip()
+                    usage = body.get("usage", {})
+                    return content, usage
+                except (KeyError, IndexError, TypeError) as exc:
+                    raise ProviderError(f"Unexpected response payload: {body}") from exc
+            except ProviderError:
+                raise
+            except Exception as exc:
+                last_exc = exc
+                if attempt < _MAX_RETRIES - 1 and _is_retryable(exc):
+                    wait = _BASE_BACKOFF_S * (2 ** attempt)
+                    logger.warning(
+                        "Retry %d/%d after %.1fs (%s)", attempt + 1, _MAX_RETRIES, wait, exc
+                    )
+                    time.sleep(wait)
+                    continue
+                break
 
-        try:
-            return body["choices"][0]["message"]["content"].strip()
-        except (KeyError, IndexError, TypeError) as exc:
-            raise ProviderError(f"Unexpected response payload: {body}") from exc
+        raise ProviderError(
+            f"OpenAI-compatible request failed after {_MAX_RETRIES} attempts: {last_exc}"
+        ) from last_exc
 
     def _prompt_for_expert(self, expert: ExpertProfile, task: str) -> tuple[str, str]:
+        base = expert.system_prompt or (
+            f"You are {expert.name}, {expert.role}"
+        )
         system_prompt = (
+            f"{base}\n"
             "You are one expert inside a routed multi-agent system. "
             "Respond concisely. Output sections exactly as: "
             "SUMMARY:, RECOMMENDATIONS:, RISKS:, CONFIDENCE:."
@@ -123,8 +180,15 @@ class OpenAICompatibleProvider(BaseProvider):
 
     def propose(self, expert: ExpertProfile, task: str, context: dict[str, Any]) -> ExpertProposal:
         system_prompt, user_prompt = self._prompt_for_expert(expert, task)
-        text = self._chat(system_prompt, user_prompt)
-        return self._parse_structured_text(expert, context["scores"][expert.key], text)
+        text, usage = self._chat(
+            system_prompt,
+            user_prompt,
+            temperature=expert.temperature,
+            max_tokens=expert.max_tokens,
+        )
+        proposal = self._parse_structured_text(expert, context["scores"][expert.key], text)
+        proposal._usage = usage  # type: ignore[attr-defined]
+        return proposal
 
     def critique(
         self,
@@ -132,7 +196,7 @@ class OpenAICompatibleProvider(BaseProvider):
         routed: list[tuple[ExpertProfile, float]],
         proposals: list[ExpertProposal],
         context: dict[str, Any],
-    ) -> dict[str, Any]:
+    ) -> CritiqueReport:
         joined = "\n".join(
             f"{proposal.expert_name}: {proposal.summary}\n"
             + "\n".join(f"- {item}" for item in proposal.recommendations)
@@ -143,7 +207,7 @@ class OpenAICompatibleProvider(BaseProvider):
             "Return sections exactly as FOCUS:, DUPLICATES:, NEXT_CHECKS: with bullet lists."
         )
         user_prompt = f"Task: {task}\n\nProposals:\n{joined}"
-        text = self._chat(system_prompt, user_prompt)
+        text, _ = self._chat(system_prompt, user_prompt)
         sections: dict[str, Any] = {"focus": [], "duplicates": [], "next_checks": []}
         current = None
         for raw_line in text.splitlines():
@@ -172,9 +236,9 @@ class OpenAICompatibleProvider(BaseProvider):
         task: str,
         routed: list[tuple[ExpertProfile, float]],
         proposals: list[ExpertProposal],
-        critique: dict[str, Any],
+        critique: CritiqueReport,
         context: dict[str, Any],
-    ) -> dict[str, Any]:
+    ) -> AggregateResult:
         joined = "\n".join(
             f"{proposal.expert_name}: {proposal.summary}\n"
             + "\n".join(f"- {item}" for item in proposal.recommendations)
@@ -188,7 +252,7 @@ class OpenAICompatibleProvider(BaseProvider):
             f"Task: {task}\n\nProposals:\n{joined}\n\nCritique:\n"
             + "\n".join(f"- {item}" for item in critique.get("focus", []))
         )
-        text = self._chat(system_prompt, user_prompt)
+        text, _ = self._chat(system_prompt, user_prompt)
         sections: dict[str, Any] = {
             "selected_experts": [proposal.expert_name for proposal in proposals],
             "consensus": [],
@@ -225,7 +289,7 @@ class OpenAICompatibleProvider(BaseProvider):
             sections["final_summary"] = "Aggregator did not return a structured summary."
         return sections
 
-    def baseline(self, task: str, context: dict[str, Any]) -> dict[str, Any]:
+    def baseline(self, task: str, context: dict[str, Any]) -> BaselineResult:
         system_prompt = (
             "You are a single generalist assistant. Respond concisely. "
             "Output sections exactly as: SUMMARY:, RECOMMENDATIONS:, RISKS:, CONFIDENCE:."
@@ -235,7 +299,7 @@ class OpenAICompatibleProvider(BaseProvider):
             "Provide a brief analysis: 1 summary sentence, 2-3 recommendations, "
             "1-2 risks, and a confidence score from 0 to 1."
         )
-        text = self._chat(system_prompt, user_prompt)
+        text, _ = self._chat(system_prompt, user_prompt)
 
         summary = ""
         recommendations: list[str] = []

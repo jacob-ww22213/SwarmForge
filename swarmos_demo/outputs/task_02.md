@@ -4,10 +4,10 @@
 - Task: 请设计一个多专家协作的代码审查 demo。 要求： 1. 输入一段 PR 说明或代码变更摘要 2. 至少路由到规划、工程、评测三个专家 3. 输出需要包含主要问题、修改建议、风险项 4. 给出后续如何接入 CI 或代码评审流程
 
 ## Routed Experts
-- `planner` / Planner: score=0.820
-- `coding_engineer` / Coding Engineer: score=0.780
-- `research_scientist` / Research Scientist: score=0.620
-- `product_strategist` / Product Strategist: score=0.500
+- `planner` / Planner: score=0.825
+- `coding_engineer` / Coding Engineer: score=0.799
+- `research_scientist` / Research Scientist: score=0.625
+- `product_strategist` / Product Strategist: score=0.503
 
 ## Expert Proposals
 ### Planner

@@ -2,7 +2,13 @@ from __future__ import annotations
 
 from typing import Any
 
-from core.types import ExpertProfile, ExpertProposal
+from core.types import (
+    AggregateResult,
+    BaselineResult,
+    CritiqueReport,
+    ExpertProfile,
+    ExpertProposal,
+)
 from experts.aggregator import build_mock_aggregate
 from experts.critic import build_mock_critique
 from experts.strategies import build_mock_proposal
@@ -21,7 +27,7 @@ class MockProvider(BaseProvider):
         routed: list[tuple[ExpertProfile, float]],
         proposals: list[ExpertProposal],
         context: dict[str, Any],
-    ) -> dict[str, Any]:
+    ) -> CritiqueReport:
         return build_mock_critique(task=task, routed=routed, proposals=proposals, context=context)
 
     def aggregate(
@@ -29,9 +35,9 @@ class MockProvider(BaseProvider):
         task: str,
         routed: list[tuple[ExpertProfile, float]],
         proposals: list[ExpertProposal],
-        critique: dict[str, Any],
+        critique: CritiqueReport,
         context: dict[str, Any],
-    ) -> dict[str, Any]:
+    ) -> AggregateResult:
         return build_mock_aggregate(
             task=task,
             routed=routed,
@@ -40,7 +46,7 @@ class MockProvider(BaseProvider):
             context=context,
         )
 
-    def baseline(self, task: str, context: dict[str, Any]) -> dict[str, Any]:
+    def baseline(self, task: str, context: dict[str, Any]) -> BaselineResult:
         profile = context["profile"]
 
         if profile["mentions_demo"]:

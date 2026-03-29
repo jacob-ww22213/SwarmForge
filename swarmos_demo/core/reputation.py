@@ -13,9 +13,11 @@ from typing import Any
 
 _DEFAULT_PATH = Path(__file__).resolve().parent.parent / "outputs" / ".reputation.json"
 
-_DEFAULT_REPUTATION = 0.50
-_LEARNING_RATE = 0.15
-_REPUTATION_WEIGHT = 0.10
+from core.config import (
+    REPUTATION_DEFAULT as _DEFAULT_REPUTATION,
+    REPUTATION_LEARNING_RATE as _LEARNING_RATE,
+    REPUTATION_WEIGHT as _REPUTATION_WEIGHT,
+)
 
 
 def load_reputation(path: Path = _DEFAULT_PATH) -> dict[str, float]:
