@@ -30,7 +30,10 @@ OUTPUTS_DIR = PROJECT_ROOT / "outputs"
 
 sys.path.insert(0, str(PROJECT_ROOT))
 
+from core.conflict import detect_conflicts
+from core.cost import build_cost_summary
 from core.task_parser import analyze_task
+from core.weighting import weighted_ranking
 from core.router import route_experts, reload_reputation
 from core.types import ExpertProfile, ExpertProposal, WorkflowTrace, normalize_task
 from core.reputation import update_reputation
@@ -122,6 +125,15 @@ def _run_single(task: str, top_k: int = 3, with_baseline: bool = False) -> Workf
         trace["baseline"] = baseline
     if errors:
         trace["errors"] = errors
+
+    usage_map = context.get("_usage")
+    trace["cost"] = build_cost_summary(trace["proposals"], usage_map)
+
+    conflicts = detect_conflicts(trace["proposals"])
+    if conflicts:
+        trace["conflicts"] = conflicts
+
+    trace["aggregate"]["weighted_ranking"] = weighted_ranking(trace["proposals"])
 
     return trace
 

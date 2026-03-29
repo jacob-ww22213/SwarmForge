@@ -25,6 +25,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--baseline", action="store_true", help="Also run a single-model baseline for comparison.")
     parser.add_argument("--update-reputation", action="store_true", help="Update expert reputation scores after this run.")
     parser.add_argument("--learn", action="store_true", help="Rebuild learned routing scores from all saved traces.")
+    parser.add_argument("--budget", type=float, default=None, help="Max estimated cost in USD. Low-value experts are skipped when budget is tight.")
     parser.add_argument("--save-markdown", help="Write the markdown report to this path.")
     parser.add_argument("--save-json", help="Write the JSON trace to this path.")
     return parser.parse_args()

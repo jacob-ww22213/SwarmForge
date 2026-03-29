@@ -357,7 +357,14 @@ function renderRunResult(t) {
       <td>${a.consensus.map(c=>'· '+h(c)).join('<br>')}</td>
       <td>${a.next_steps.map(c=>'· '+h(c)).join('<br>')}</td>
       <td>${a.key_risks.map(c=>'· '+h(c)).join('<br>')}</td>
-    </tr></table></div>`;
+    </tr></table>`;
+  if (a.weighted_ranking && a.weighted_ranking.length) {
+    html += `<div style="margin-top:12px;"><strong style="font-size:12px;color:var(--text-dim);">置信度×信誉 加权排名:</strong><table>
+      <tr><th>专家</th><th>信心</th><th>信誉</th><th>综合权重</th></tr>
+      ${a.weighted_ranking.map(w => `<tr><td>${h(w.expert_name)}</td><td>${pct(w.confidence)}%</td><td>${pct(w.reputation)}%</td><td class="cmp-better">${(w.weight*100).toFixed(1)}%</td></tr>`).join('')}
+    </table></div>`;
+  }
+  html += `</div>`;
 
   /* Baseline */
   if (t.baseline) {
@@ -372,6 +379,38 @@ function renderRunResult(t) {
         <tr><td>平均信心</td><td class="${avgConf>b.confidence?'cmp-better':'cmp-worse'}">${pct(avgConf)}%</td><td>${pct(b.confidence)}%</td></tr>
         <tr><td>风险数</td><td>${t.proposals.reduce((s,p)=>s+p.risks.length,0)}</td><td>${b.risks.length}</td></tr>
       </table></div>`;
+  }
+
+  /* Cost */
+  if (t.cost) {
+    const c = t.cost;
+    html += `<h3>成本追踪</h3><div class="card"><table>
+      <tr><th>指标</th><th>值</th></tr>
+      <tr><td>总 token</td><td>${c.total_tokens}</td></tr>
+      <tr><td>Prompt tokens</td><td>${c.prompt_tokens}</td></tr>
+      <tr><td>Completion tokens</td><td>${c.completion_tokens}</td></tr>
+      <tr><td>估算费用</td><td>$${c.estimated_cost_usd}</td></tr>
+    </table>`;
+    if (c.per_expert) {
+      html += `<div style="margin-top:8px;font-size:12px;color:var(--text-dim);">`;
+      for (const [k,v] of Object.entries(c.per_expert)) {
+        html += `${h(k)}: ${v.prompt_tokens}+${v.completion_tokens} tok, $${v.estimated_cost_usd} &nbsp;`;
+      }
+      html += `</div>`;
+    }
+    html += `</div>`;
+  }
+
+  /* Conflicts */
+  if (t.conflicts && t.conflicts.length) {
+    html += `<h3>冲突检测</h3>`;
+    for (const c of t.conflicts) {
+      html += `<div class="card" style="border-color:var(--warn);">
+        <span class="tag tag-warn">${h(c.type)}</span>
+        <div style="font-size:13px;margin-top:6px;">${h(c.description)}</div>
+        <div style="font-size:12px;color:var(--text-dim);margin-top:4px;">专家: ${c.experts.map(e=>h(e)).join(' vs ')}</div>
+      </div>`;
+    }
   }
 
   /* Duration + errors + save info */

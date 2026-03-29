@@ -52,6 +52,27 @@ class _WorkflowTraceRequired(TypedDict):
     aggregate: AggregateResult
 
 
+class TaskRequest(TypedDict, total=False):
+    """Formal request structure matching 03_模块对接文档 §3.1."""
+    task: str
+    provider: str
+    top_k: int
+    baseline: bool
+    save_markdown: str
+    save_json: str
+    update_reputation: bool
+    learn: bool
+    budget: float
+
+
+class CostSummary(TypedDict, total=False):
+    total_tokens: int
+    prompt_tokens: int
+    completion_tokens: int
+    estimated_cost_usd: float
+    per_expert: dict[str, Any]
+
+
 class WorkflowTrace(_WorkflowTraceRequired, total=False):
     """Formal trace structure matching 03_模块对接文档 §3.8.
 
@@ -62,6 +83,8 @@ class WorkflowTrace(_WorkflowTraceRequired, total=False):
     user_feedback: str
     duration_ms: int
     errors: list[str]
+    cost: CostSummary
+    conflicts: list[dict[str, Any]]
 
 
 # ---------------------------------------------------------------------------
@@ -83,6 +106,9 @@ class ExpertProfile:
     role: str
     keywords: tuple[str, ...]
     bias: float = 0.0
+    temperature: float = 0.2
+    max_tokens: int = 512
+    system_prompt: str = ""
 
 
 @dataclass

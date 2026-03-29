@@ -10,7 +10,10 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
+from core.conflict import detect_conflicts
+from core.cost import build_cost_summary
 from core.task_parser import analyze_task
+from core.weighting import weighted_ranking
 from core.router import route_experts
 from core.types import (
     ExpertProfile,
@@ -61,7 +64,8 @@ def run_demo(args: argparse.Namespace) -> dict[str, Any]:
 
     task = normalize_task(task)
     profile = analyze_task(task)
-    routed, scores = route_experts(task=task, profile=profile, top_k=args.top_k)
+    budget = getattr(args, "budget", None)
+    routed, scores = route_experts(task=task, profile=profile, top_k=args.top_k, budget=budget)
     context: dict[str, Any] = {"profile": profile, "scores": scores}
     provider = build_provider(args)
 
@@ -128,6 +132,15 @@ def run_demo(args: argparse.Namespace) -> dict[str, Any]:
         trace["baseline"] = baseline
     if errors:
         trace["errors"] = errors
+
+    usage_map = context.get("_usage")
+    trace["cost"] = build_cost_summary(trace["proposals"], usage_map)
+
+    conflicts = detect_conflicts(trace["proposals"])
+    if conflicts:
+        trace["conflicts"] = conflicts
+
+    trace["aggregate"]["weighted_ranking"] = weighted_ranking(trace["proposals"])
 
     if getattr(args, "update_reputation", False):
         from core.reputation import update_reputation

@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from typing import Any
 
+from core.cost import _COST_PER_1K_COMPLETION, _COST_PER_1K_PROMPT
 from core.learned_router import learned_bonus, load_learned_scores
 from core.reputation import load_reputation, reputation_bonus
 from core.types import ExpertProfile, TaskProfile, clamp
@@ -67,8 +68,18 @@ def score_expert(expert: ExpertProfile, task: str, profile: TaskProfile) -> floa
     return round(clamp(score, 0.0, 1.0), 3)
 
 
+def _estimate_expert_cost(expert: ExpertProfile) -> float:
+    """Rough per-call cost estimate based on max_tokens config."""
+    prompt_tokens = expert.max_tokens * 2
+    return (prompt_tokens * _COST_PER_1K_PROMPT + expert.max_tokens * _COST_PER_1K_COMPLETION) / 1000
+
+
 def route_experts(
-    task: str, profile: TaskProfile, top_k: int
+    task: str,
+    profile: TaskProfile,
+    top_k: int,
+    *,
+    budget: float | None = None,
 ) -> tuple[list[tuple[ExpertProfile, float]], dict[str, float]]:
     score_map: dict[str, float] = {}
     for expert in EXPERTS:
@@ -81,6 +92,20 @@ def route_experts(
             continue
         optional.append((expert, score_map[expert.key]))
     optional.sort(key=lambda item: item[1], reverse=True)
+
     selected = [(expert, score_map[expert.key]) for expert in EXPERTS if expert.key in always_include]
-    selected.extend(optional[:top_k])
+    remaining_budget = budget
+
+    if remaining_budget is not None:
+        for expert, _ in selected:
+            remaining_budget -= _estimate_expert_cost(expert)
+
+    for expert, sc in optional[:top_k]:
+        if remaining_budget is not None:
+            cost = _estimate_expert_cost(expert)
+            if cost > remaining_budget:
+                continue
+            remaining_budget -= cost
+        selected.append((expert, sc))
+
     return selected, score_map

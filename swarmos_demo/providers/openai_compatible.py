@@ -36,15 +36,24 @@ class OpenAICompatibleProvider(BaseProvider):
         self.api_key = api_key
         self.model = model
 
-    def _chat(self, system_prompt: str, user_prompt: str) -> str:
+    def _chat(
+        self,
+        system_prompt: str,
+        user_prompt: str,
+        *,
+        temperature: float = 0.2,
+        max_tokens: int = 512,
+    ) -> tuple[str, dict[str, int]]:
+        """Returns (content, usage_dict). usage_dict may be empty if provider omits it."""
         endpoint = f"{self.base_url}/chat/completions"
-        payload = {
+        payload: dict[str, Any] = {
             "model": self.model,
             "messages": [
                 {"role": "system", "content": system_prompt},
                 {"role": "user", "content": user_prompt},
             ],
-            "temperature": 0.2,
+            "temperature": temperature,
+            "max_tokens": max_tokens,
         }
         last_exc: Exception | None = None
         for attempt in range(_MAX_RETRIES):
@@ -61,7 +70,9 @@ class OpenAICompatibleProvider(BaseProvider):
                 with urllib.request.urlopen(request, timeout=_REQUEST_TIMEOUT_S) as response:
                     body = json.loads(response.read().decode("utf-8"))
                 try:
-                    return body["choices"][0]["message"]["content"].strip()
+                    content = body["choices"][0]["message"]["content"].strip()
+                    usage = body.get("usage", {})
+                    return content, usage
                 except (KeyError, IndexError, TypeError) as exc:
                     raise ProviderError(f"Unexpected response payload: {body}") from exc
             except ProviderError:
@@ -82,7 +93,11 @@ class OpenAICompatibleProvider(BaseProvider):
         ) from last_exc
 
     def _prompt_for_expert(self, expert: ExpertProfile, task: str) -> tuple[str, str]:
+        base = expert.system_prompt or (
+            f"You are {expert.name}, {expert.role}"
+        )
         system_prompt = (
+            f"{base}\n"
             "You are one expert inside a routed multi-agent system. "
             "Respond concisely. Output sections exactly as: "
             "SUMMARY:, RECOMMENDATIONS:, RISKS:, CONFIDENCE:."
@@ -156,7 +171,13 @@ class OpenAICompatibleProvider(BaseProvider):
 
     def propose(self, expert: ExpertProfile, task: str, context: dict[str, Any]) -> ExpertProposal:
         system_prompt, user_prompt = self._prompt_for_expert(expert, task)
-        text = self._chat(system_prompt, user_prompt)
+        text, usage = self._chat(
+            system_prompt,
+            user_prompt,
+            temperature=expert.temperature,
+            max_tokens=expert.max_tokens,
+        )
+        context.setdefault("_usage", {})[expert.key] = usage
         return self._parse_structured_text(expert, context["scores"][expert.key], text)
 
     def critique(
@@ -176,7 +197,7 @@ class OpenAICompatibleProvider(BaseProvider):
             "Return sections exactly as FOCUS:, DUPLICATES:, NEXT_CHECKS: with bullet lists."
         )
         user_prompt = f"Task: {task}\n\nProposals:\n{joined}"
-        text = self._chat(system_prompt, user_prompt)
+        text, _ = self._chat(system_prompt, user_prompt)
         sections: dict[str, Any] = {"focus": [], "duplicates": [], "next_checks": []}
         current = None
         for raw_line in text.splitlines():
@@ -221,7 +242,7 @@ class OpenAICompatibleProvider(BaseProvider):
             f"Task: {task}\n\nProposals:\n{joined}\n\nCritique:\n"
             + "\n".join(f"- {item}" for item in critique.get("focus", []))
         )
-        text = self._chat(system_prompt, user_prompt)
+        text, _ = self._chat(system_prompt, user_prompt)
         sections: dict[str, Any] = {
             "selected_experts": [proposal.expert_name for proposal in proposals],
             "consensus": [],
@@ -268,7 +289,7 @@ class OpenAICompatibleProvider(BaseProvider):
             "Provide a brief analysis: 1 summary sentence, 2-3 recommendations, "
             "1-2 risks, and a confidence score from 0 to 1."
         )
-        text = self._chat(system_prompt, user_prompt)
+        text, _ = self._chat(system_prompt, user_prompt)
 
         summary = ""
         recommendations: list[str] = []

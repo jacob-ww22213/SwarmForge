@@ -4,10 +4,14 @@ A runnable MVP for the "many small experts + routing + collaboration" idea.
 
 What it demonstrates:
 - Task parsing and domain detection
-- Sparse expert routing with reputation scoring and learned scores
+- Sparse expert routing with reputation scoring, learned scores, and budget constraints
+- Per-expert prompt templates, temperature, and token limits
 - Parallel expert proposals with fault tolerance
+- Automatic conflict detection between experts
+- Confidence × reputation weighted aggregation
 - Critic review
 - Aggregation into a final answer
+- Token counting and cost estimation
 - Single-model baseline comparison
 - Trace saving for later inspection and evaluation
 - HTTP retry with exponential backoff for real providers
@@ -77,6 +81,7 @@ python3 evaluate.py outputs/task_01.json outputs/task_02.json outputs/task_03.js
 | `--baseline` | Also run a single-model baseline for comparison |
 | `--update-reputation` | Update expert reputation scores after this run |
 | `--learn` | Rebuild learned routing scores from all saved traces |
+| `--budget USD` | Max estimated cost; low-value experts skipped when tight |
 | `--save-markdown PATH` | Write markdown report |
 | `--save-json PATH` | Write JSON trace |
 
@@ -119,7 +124,10 @@ swarmos_demo/
 │   ├── learned_router.py     # Trace-based learned routing scores (V4)
 │   ├── workflow.py           # Main orchestration with fault tolerance (V4)
 │   ├── storage.py            # Trace / markdown persistence
-│   └── reputation.py         # Expert reputation store
+│   ├── reputation.py         # Expert reputation store
+│   ├── cost.py               # Token counting & cost estimation (V5)
+│   ├── conflict.py           # Inter-expert conflict detection (V5)
+│   └── weighting.py          # Confidence × reputation weighting (V5)
 │
 ├── providers/                # A-line: inference backends
 │   ├── base.py               # BaseProvider abstraction
@@ -165,6 +173,8 @@ Each run produces a trace with:
   "critique": { "focus": [...], "duplicates": [...], "next_checks": [...] },
   "aggregate": { "final_summary": "...", "consensus": [...], ... },
   "baseline": { "summary": "...", "recommendations": [...], ... },
+  "cost": { "total_tokens": 696, "estimated_cost_usd": 0.002676, "per_expert": {...} },
+  "conflicts": [{ "type": "...", "experts": [...], "description": "..." }],
   "duration_ms": 42,
   "errors": []
 }
