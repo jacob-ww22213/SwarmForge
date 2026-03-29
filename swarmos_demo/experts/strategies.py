@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from typing import Any
 
-from demo_types import ExpertProfile, ExpertProposal
+from core.types import ExpertProfile, ExpertProposal, clamp
 
 
 BASE_SUMMARIES = {
@@ -88,10 +88,6 @@ BASE_RISKS = {
         "高风险行业如果没有安全边界，demo 可能被误用。",
     ],
 }
-
-
-def clamp(value: float, low: float, high: float) -> float:
-    return max(low, min(high, value))
 
 
 def append_unique(items: list[str], new_items: list[str]) -> list[str]:

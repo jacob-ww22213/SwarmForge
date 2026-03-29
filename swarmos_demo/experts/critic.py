@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from typing import Any
 
-from demo_types import ExpertProfile, ExpertProposal
+from core.types import ExpertProfile, ExpertProposal
 
 
 def build_mock_critique(

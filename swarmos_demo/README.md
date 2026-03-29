@@ -1,111 +1,161 @@
 # SwarmOS Demo
 
-This is a runnable MVP for the "many small experts + routing + collaboration" idea.
+A runnable MVP for the "many small experts + routing + collaboration" idea.
 
 What it demonstrates:
-- Task parsing
-- Sparse expert routing
+- Task parsing and domain detection
+- Sparse expert routing with reputation scoring
 - Parallel expert proposals
 - Critic review
 - Aggregation into a final answer
-- Trace saving for later inspection
-
-What it does not prove:
-- It does not prove that many 0.5B models already beat frontier models
-- It does not train or run real 0.5B expert checkpoints
-- The default mode is an offline mock designed to validate the workflow
+- Single-model baseline comparison
+- Trace saving for later inspection and evaluation
 
 ## Quick start
 
-Run the offline demo:
+Run the offline demo (default mock provider, no network needed):
 
 ```bash
-python3 swarmos_demo/swarmos_demo.py \
-  --task "为一个由大量0.5B小模型组成的系统设计一个低成本demo，并给出下一步实验计划" \
-  --save-markdown swarmos_demo/outputs/demo_result.md \
-  --save-json swarmos_demo/outputs/demo_result.json
+python3 cli.py --task "为一个由大量0.5B小模型组成的系统设计一个低成本demo，并给出下一步实验计划"
 ```
 
 Run with a task file:
 
 ```bash
-python3 swarmos_demo/swarmos_demo.py \
-  --task-file swarmos_demo/examples/task_01.txt \
-  --save-markdown swarmos_demo/outputs/task_01.md \
-  --save-json swarmos_demo/outputs/task_01.json
+python3 cli.py \
+  --task-file examples/task_01.txt \
+  --save-markdown outputs/task_01.md \
+  --save-json outputs/task_01.json
 ```
+
+Run with baseline comparison:
+
+```bash
+python3 cli.py \
+  --task-file examples/task_01.txt \
+  --baseline \
+  --save-json outputs/task_01.json
+```
+
+Run with reputation updates (scores evolve across runs):
+
+```bash
+python3 cli.py \
+  --task-file examples/task_01.txt \
+  --baseline \
+  --update-reputation \
+  --save-json outputs/task_01.json
+```
+
+Evaluate across multiple traces:
+
+```bash
+python3 evaluate.py outputs/task_01.json outputs/task_02.json outputs/task_03.json
+```
+
+## CLI flags
+
+| Flag | Description |
+|------|-------------|
+| `--task TEXT` | Inline task text |
+| `--task-file PATH` | Path to a UTF-8 text file with the task |
+| `--provider` | `mock` (default), `openai-compatible`, or `ollama` |
+| `--base-url` | Base URL for real providers |
+| `--api-key` | API key for openai-compatible provider |
+| `--model` | Model name for real providers |
+| `--top-k N` | Number of non-planner experts to route (default 3) |
+| `--baseline` | Also run a single-model baseline for comparison |
+| `--update-reputation` | Update expert reputation scores after this run |
+| `--save-markdown PATH` | Write markdown report |
+| `--save-json PATH` | Write JSON trace |
 
 ## Provider modes
 
-### 1. Offline mock
+### 1. Offline mock (default)
 
-Default mode. No network or model server required.
-
-```bash
-python3 swarmos_demo/swarmos_demo.py --task "请帮我设计一个企业法务审查 demo"
-```
+No network or model server required.
 
 ### 2. OpenAI-compatible endpoint
-
-This path is included so you can later swap in a real backend.
 
 ```bash
 export SWARMOS_API_KEY="your-key"
 export SWARMOS_BASE_URL="https://your-endpoint.example/v1"
 export SWARMOS_MODEL="your-model-name"
 
-python3 swarmos_demo/swarmos_demo.py \
-  --provider openai-compatible \
-  --task "设计一个多专家协作代码评审 demo"
+python3 cli.py --provider openai-compatible --task "设计一个多专家协作代码评审 demo"
 ```
-
-Notes:
-- The script calls `POST {base_url}/chat/completions`
-- It uses only Python standard library HTTP
-- In the current workspace this provider is not guaranteed to work without network access
 
 ### 3. Ollama
 
-If you later install Ollama locally:
-
 ```bash
-python3 swarmos_demo/swarmos_demo.py \
-  --provider ollama \
-  --model qwen2.5:7b \
-  --task "用本地模型跑一个协作规划 demo"
+python3 cli.py --provider ollama --model qwen2.5:7b --task "用本地模型跑一个协作规划 demo"
 ```
 
-## Output
+## Project structure
 
-The demo prints:
-- Routed experts and scores
-- Each expert proposal
-- Critic notes
-- Final aggregated answer
+```text
+swarmos_demo/
+├── cli.py                    # CLI entry point
+├── swarmos_demo.py           # Backward-compatible thin wrapper
+├── evaluate.py               # Trace evaluation script
+├── demo_types.py             # Re-export for backward compat
+│
+├── core/                     # A-line: engine & orchestration
+│   ├── types.py              # Shared types (TypedDict + dataclass)
+│   ├── task_parser.py        # Task analysis (language / domain / action / risk)
+│   ├── router.py             # Expert scoring & selection with reputation
+│   ├── workflow.py           # Main orchestration pipeline
+│   ├── storage.py            # Trace / markdown persistence
+│   └── reputation.py         # Expert reputation store
+│
+├── providers/                # A-line: inference backends
+│   ├── base.py               # BaseProvider abstraction
+│   ├── mock.py               # Offline mock (delegates to experts/)
+│   ├── openai_compatible.py  # OpenAI-compatible HTTP provider
+│   └── ollama.py             # Ollama local provider
+│
+├── experts/                  # B-line: expert content & strategies
+│   ├── registry.py           # 8 expert profiles
+│   ├── strategies.py         # Context-aware proposal generation
+│   ├── critic.py             # Critique logic
+│   └── aggregator.py         # Aggregation logic
+│
+├── reporting/                # B-line: output formatting
+│   ├── console.py            # Terminal report
+│   └── markdown.py           # Markdown report with comparison table
+│
+├── examples/                 # Sample task files
+│   ├── task_01.txt
+│   ├── task_02.txt
+│   └── task_03.txt
+│
+├── outputs/                  # Generated results (gitignored)
+└── docs/                     # Design documents
+```
 
-If you pass save flags, it also writes:
-- Markdown report
-- JSON trace
+## JSON trace format
 
-## Suggested first experiments
+Each run produces a trace with:
 
-Try these tasks:
-- `请为这个群智引擎项目设计一个 2 周内可做完的 MVP`
-- `请设计一个多专家协作的代码审查系统，并指出成本控制方法`
-- `请评估把法律、医疗、代码专家接入同一系统的主要风险`
-- `swarmos_demo/examples/task_02.txt`
-- `swarmos_demo/examples/task_03.txt`
+```json
+{
+  "run_id": "74b083a99fce",
+  "timestamp": "2026-03-29T05:14:04Z",
+  "task": "...",
+  "provider": "mock",
+  "profile": { "language": "zh", "domains": [...], ... },
+  "routed": [{ "key": "planner", "name": "Planner", "score": 0.63 }, ...],
+  "proposals": [...],
+  "critique": { "focus": [...], "duplicates": [...], "next_checks": [...] },
+  "aggregate": { "final_summary": "...", "consensus": [...], ... },
+  "baseline": { "summary": "...", "recommendations": [...], ... }
+}
+```
 
-## Files
+## Suggested experiments
 
-- `swarmos_demo/swarmos_demo.py`: main CLI
-- `swarmos_demo/demo_types.py`: shared expert-side data structures
-- `swarmos_demo/examples/task_01.txt`: starter task
-- `swarmos_demo/examples/task_02.txt`: code review demo task
-- `swarmos_demo/examples/task_03.txt`: investor-facing demo task
-- `swarmos_demo/outputs/`: generated demo results
-- `swarmos_demo/experts/`: registry, proposal strategies, critic, aggregator
-- `swarmos_demo/reporting/`: console and markdown renderers
-- `swarmos_demo/docs/01_项目详细技术文档.md`: architecture and scope
-- `swarmos_demo/docs/02_双人开发任务拆解文档.md`: two-person ownership and execution plan
-- `swarmos_demo/docs/03_模块对接文档.md`: interface and integration contract
+```bash
+python3 cli.py --task "请为这个群智引擎项目设计一个 2 周内可做完的 MVP" --baseline
+python3 cli.py --task "请设计一个多专家协作的代码审查系统，并指出成本控制方法" --baseline
+python3 cli.py --task "请评估把法律、医疗、代码专家接入同一系统的主要风险" --baseline
+```

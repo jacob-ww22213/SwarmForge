@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from demo_types import ExpertProfile
+from core.types import ExpertProfile
 
 
 EXPERTS = [

@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from typing import Any
 
-from demo_types import ExpertProfile, ExpertProposal
+from core.types import ExpertProfile, ExpertProposal
 
 
 def bullet_block(title: str, items: list[str]) -> str:
@@ -12,14 +12,51 @@ def bullet_block(title: str, items: list[str]) -> str:
     return "\n".join(lines)
 
 
+def _render_baseline_comparison(
+    baseline: dict[str, Any],
+    proposals: list[ExpertProposal],
+) -> list[str]:
+    lines: list[str] = []
+    lines.append("")
+    lines.append("-" * 72)
+    lines.append("Baseline (single-model, no routing)")
+    lines.append("-" * 72)
+    lines.append(f"Summary: {baseline['summary']}")
+    lines.append(f"Confidence: {baseline['confidence']:.2f}")
+    lines.append("")
+    lines.append("Recommendations:")
+    for item in baseline["recommendations"]:
+        lines.append(f"- {item}")
+    lines.append("")
+    lines.append("Risks:")
+    for item in baseline["risks"]:
+        lines.append(f"- {item}")
+
+    multi_recs = sum(len(p.recommendations) for p in proposals)
+    multi_risks = sum(len(p.risks) for p in proposals)
+    lines.append("")
+    lines.append("Quick comparison:")
+    lines.append(
+        f"  Baseline:      {len(baseline['recommendations'])} recs, "
+        f"{len(baseline['risks'])} risks, conf={baseline['confidence']:.2f}"
+    )
+    lines.append(
+        f"  Multi-expert:  {multi_recs} recs, "
+        f"{multi_risks} risks (from {len(proposals)} experts)"
+    )
+    return lines
+
+
 def render_console_report(
     task: str,
     routed: list[tuple[ExpertProfile, float]],
     proposals: list[ExpertProposal],
     critique: dict[str, Any],
     aggregate: dict[str, Any],
+    *,
+    baseline: dict[str, Any] | None = None,
 ) -> str:
-    lines = []
+    lines: list[str] = []
     lines.append("=" * 72)
     lines.append("SwarmOS Demo")
     lines.append("=" * 72)
@@ -62,4 +99,8 @@ def render_console_report(
     lines.append(bullet_block("Next steps", aggregate["next_steps"]))
     lines.append("")
     lines.append(bullet_block("Key risks", aggregate["key_risks"]))
+
+    if baseline is not None:
+        lines.extend(_render_baseline_comparison(baseline, proposals))
+
     return "\n".join(lines)

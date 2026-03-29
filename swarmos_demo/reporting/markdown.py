@@ -2,7 +2,48 @@ from __future__ import annotations
 
 from typing import Any
 
-from demo_types import ExpertProfile, ExpertProposal
+from core.types import ExpertProfile, ExpertProposal
+
+
+def _render_baseline_section(
+    baseline: dict[str, Any],
+    proposals: list[ExpertProposal],
+) -> list[str]:
+    lines: list[str] = []
+    lines.append("## Baseline (Single-Model)")
+    lines.append("")
+    lines.append(f"- Summary: {baseline['summary']}")
+    lines.append(f"- Confidence: {baseline['confidence']:.2f}")
+    lines.append("")
+    lines.append("Recommendations:")
+    for item in baseline["recommendations"]:
+        lines.append(f"- {item}")
+    lines.append("")
+    lines.append("Risks:")
+    for item in baseline["risks"]:
+        lines.append(f"- {item}")
+    lines.append("")
+
+    multi_recs = sum(len(p.recommendations) for p in proposals)
+    multi_risks = sum(len(p.risks) for p in proposals)
+    avg_conf = sum(p.confidence for p in proposals) / len(proposals) if proposals else 0
+
+    lines.append("## Baseline vs Multi-Expert Comparison")
+    lines.append("")
+    lines.append("| Metric | Baseline | Multi-Expert |")
+    lines.append("|--------|----------|--------------|")
+    lines.append(
+        f"| Recommendations | {len(baseline['recommendations'])} | {multi_recs} |"
+    )
+    lines.append(
+        f"| Risks identified | {len(baseline['risks'])} | {multi_risks} |"
+    )
+    lines.append(
+        f"| Confidence | {baseline['confidence']:.2f} | {avg_conf:.2f} (avg) |"
+    )
+    lines.append(f"| Perspectives | 1 (generalist) | {len(proposals)} (specialists) |")
+    lines.append("")
+    return lines
 
 
 def render_markdown_report(
@@ -12,8 +53,10 @@ def render_markdown_report(
     proposals: list[ExpertProposal],
     critique: dict[str, Any],
     aggregate: dict[str, Any],
+    *,
+    baseline: dict[str, Any] | None = None,
 ) -> str:
-    lines = []
+    lines: list[str] = []
     lines.append("# SwarmOS Demo Report")
     lines.append("")
     lines.append(f"- Provider: `{provider_mode}`")
@@ -52,6 +95,10 @@ def render_markdown_report(
         for item in critique["next_checks"]:
             lines.append(f"- {item}")
         lines.append("")
+
+    if baseline is not None:
+        lines.extend(_render_baseline_section(baseline, proposals))
+
     lines.append("## Final Output")
     lines.append(aggregate["final_summary"])
     lines.append("")
