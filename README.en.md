@@ -1,17 +1,11 @@
 # SwarmForge English Guide
 
-SwarmForge is a runnable demo of a routed multi-expert AI system.
+SwarmForge now includes two complementary tracks:
 
-Instead of acting like one giant monolithic model, the project demonstrates a system pipeline:
+1. a single-machine routed multi-expert demo
+2. a stage-3 distributed small-model network demo
 
-1. accept a task
-2. build a task profile
-3. route the task to a small set of experts
-4. generate expert proposals in parallel
-5. run critique and duplicate checks
-6. aggregate the final result
-7. compare against a single-model baseline
-8. save traces for replay, evaluation, and future learning
+The distributed mode is the closer match to the target product: a controller tracks online worker nodes, each worker runs a local model, the browser sends a task to the controller, and the controller dispatches that task to all online small-model nodes before aggregating results, latency, and user satisfaction.
 
 ## What This Project Demonstrates
 
@@ -22,6 +16,10 @@ Instead of acting like one giant monolithic model, the project demonstrates a sy
 - baseline comparison
 - cost estimation, conflict detection, TF-IDF routing, reputation, learned scores
 - web UI demo and multi-round collaboration
+- controller + worker multi-machine orchestration
+- worker heartbeats and online node tracking
+- Ollama model pull and model switch actions from the dashboard
+- distributed task history, latency metrics, and user ratings
 
 ## Repository Layout
 
@@ -31,6 +29,12 @@ Instead of acting like one giant monolithic model, the project demonstrates a sy
   canonical web demo entry point
 - `swarmos_demo/web.py`
   compatibility wrapper that forwards to `serve.py`
+- `swarmos_demo/controller.py`
+  distributed controller for worker registration, task dispatch, aggregation, and metrics
+- `swarmos_demo/worker.py`
+  worker node service for local model execution, heartbeats, model pull, and model switch
+- `swarmos_demo/distributed_common.py`
+  shared distributed helpers, aggregation logic, and Ollama utilities
 - `swarmos_demo/core/`
   orchestration, routing, parsing, cost, conflict, weighting, learned routing
 - `swarmos_demo/providers/`
@@ -79,7 +83,7 @@ python3 -m swarmos_demo.cli \
   --baseline
 ```
 
-### 2. Run the Web Demo
+### 2. Run the Single-Machine Web Demo
 
 Canonical command:
 
@@ -100,7 +104,61 @@ python3 -m swarmos_demo.web
 python3 swarmos_demo/web.py
 ```
 
-### 3. Run with Real Models
+### 3. Run Stage 3 Distributed Mode
+
+Start the controller:
+
+```bash
+python3 -m swarmos_demo.controller --host 0.0.0.0 --port 8010
+```
+
+Start one worker on each node. Example with Ollama:
+
+```bash
+python3 -m swarmos_demo.worker \
+  --controller-url http://CONTROLLER_IP:8010 \
+  --public-url http://WORKER_IP:8020 \
+  --host 0.0.0.0 \
+  --port 8020 \
+  --provider ollama \
+  --base-url http://127.0.0.1:11434/v1 \
+  --model qwen2.5:7b \
+  --worker-id worker-a \
+  --name Worker-A \
+  --role-key coding_worker \
+  --role-name "Coding Worker"
+```
+
+For local smoke tests, you can start a mock worker instead:
+
+```bash
+python3 -m swarmos_demo.worker \
+  --controller-url http://127.0.0.1:8010 \
+  --public-url http://127.0.0.1:8021 \
+  --host 127.0.0.1 \
+  --port 8021 \
+  --provider mock \
+  --worker-id worker-a \
+  --name Worker-A \
+  --role-key coding_worker \
+  --role-name "Coding Worker"
+```
+
+Then open:
+
+```text
+http://CONTROLLER_IP:8010
+```
+
+The distributed dashboard supports:
+- online/offline worker visibility
+- Ollama model download per worker
+- model switching per worker
+- broadcast task dispatch to all online nodes
+- per-worker results, latency, and aggregated output
+- 1 to 5 user satisfaction ratings
+
+### 4. Run with Real Models
 
 OpenAI-compatible:
 
@@ -123,6 +181,18 @@ python3 -m swarmos_demo.cli \
 ```
 
 ## Runtime Flow
+
+### Distributed Runtime Flow
+
+1. the controller starts and exposes a dashboard plus task APIs
+2. each worker starts, loads its local provider, and sends heartbeats to the controller
+3. the controller maintains online worker state and metadata
+4. the user enters a task in the browser
+5. the controller broadcasts that task to every online worker
+6. each worker runs its local model and returns a proposal plus latency
+7. the controller aggregates all proposals into a final summary, recommendations, and risks
+8. the controller stores the task record under `swarmos_demo/outputs/distributed/tasks/`
+9. the user can rate the output for later evaluation
 
 ### Node 1: Input
 

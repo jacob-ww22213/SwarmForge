@@ -5,3 +5,4 @@ __pycache__/
 .pytest_cache/
 swarmos_demo/outputs/.reputation.json
 swarmos_demo/outputs/web_history/
+swarmos_demo/outputs/distributed/

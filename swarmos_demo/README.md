@@ -1,6 +1,8 @@
 # SwarmOS Demo
 
-A runnable MVP for the "many small experts + routing + collaboration" idea.
+A runnable MVP for two related directions:
+- a routed multi-expert collaboration demo
+- a stage-3 distributed controller + worker small-model network
 
 What it demonstrates:
 - Task parsing and domain detection
@@ -15,8 +17,15 @@ What it demonstrates:
 - Single-model baseline comparison
 - Trace saving for later inspection and evaluation
 - HTTP retry with exponential backoff for real providers
+- controller + worker multi-machine orchestration
+- worker heartbeats and online status tracking
+- task broadcast to all online worker nodes
+- per-worker model pull / model switch support for Ollama
+- distributed task trace, latency, completion rate, and user rating capture
 
 ## Quick start
+
+### A. Single-machine collaboration demo
 
 From the `swarmos_demo/` directory, run the offline demo (default mock provider, no network needed):
 
@@ -66,6 +75,60 @@ The web demo includes:
 Important:
 - `serve.py` is the only real web server implementation
 - `web.py` is now just a compatibility wrapper to avoid breaking old commands
+
+### B. Stage-3 distributed multi-machine demo
+
+Start the controller from the repo root:
+
+```bash
+python3 -m swarmos_demo.controller --host 0.0.0.0 --port 8010
+```
+
+On each worker machine, start a worker that points back to the controller:
+
+```bash
+python3 -m swarmos_demo.worker \
+  --controller-url http://CONTROLLER_IP:8010 \
+  --public-url http://WORKER_IP:8020 \
+  --host 0.0.0.0 \
+  --port 8020 \
+  --provider ollama \
+  --base-url http://127.0.0.1:11434/v1 \
+  --model qwen2.5:7b \
+  --worker-id worker-a \
+  --name Worker-A \
+  --role-key coding_worker \
+  --role-name "Coding Worker"
+```
+
+For local smoke tests without a real model server, use `--provider mock`:
+
+```bash
+python3 -m swarmos_demo.worker \
+  --controller-url http://127.0.0.1:8010 \
+  --public-url http://127.0.0.1:8021 \
+  --host 127.0.0.1 \
+  --port 8021 \
+  --provider mock \
+  --worker-id worker-a \
+  --name Worker-A \
+  --role-key coding_worker \
+  --role-name "Coding Worker"
+```
+
+Open the distributed dashboard:
+
+```text
+http://CONTROLLER_IP:8010
+```
+
+The distributed UI lets you:
+- view online and offline worker nodes
+- trigger Ollama model downloads on a worker
+- switch the active model on a worker
+- broadcast a task to all online workers
+- inspect per-worker proposals and aggregate output
+- rate the final result from 1 to 5
 
 Run with a task file:
 
@@ -165,8 +228,8 @@ Run the tests:
 ./.venv/bin/python -m pytest
 ```
 
-114+ tests covering all A-line modules: types, task parser, router, TF-IDF,
-reputation, learned routing, cost, conflict, weighting, workflow, serve, CLI.
+120+ tests covering types, task parser, router, TF-IDF, reputation, learned routing,
+cost, conflict, weighting, workflow, serve, CLI, and the distributed stage-3 helpers.
 
 ## Project structure
 
@@ -175,6 +238,9 @@ swarmos_demo/
 ├── cli.py                    # CLI entry point
 ├── serve.py                  # Canonical web demo server (zero deps)
 ├── web.py                    # Compatibility wrapper for serve.py
+├── controller.py             # Distributed controller service
+├── worker.py                 # Distributed worker node service
+├── distributed_common.py     # Shared distributed helpers and aggregation
 ├── swarmos_demo.py           # Backward-compatible thin wrapper
 ├── evaluate.py               # Trace evaluation script
 ├── demo_types.py             # Re-export for backward compat
@@ -209,7 +275,7 @@ swarmos_demo/
 │   ├── console.py            # Terminal report
 │   └── markdown.py           # Markdown report with comparison table
 │
-├── tests/                    # pytest test suite (V6, 114 cases)
+├── tests/                    # pytest test suite
 │   ├── conftest.py           # Shared fixtures
 │   ├── test_types.py
 │   ├── test_task_parser.py
@@ -218,6 +284,7 @@ swarmos_demo/
 │   ├── test_workflow.py
 │   ├── test_providers.py
 │   ├── test_cost_conflict_weight.py
+│   └── test_distributed_stage3.py
 │   ├── test_reputation_learned.py
 │   ├── test_serve.py
 │   ├── test_experts_registry.py

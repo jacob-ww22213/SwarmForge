@@ -1,0 +1,383 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>SwarmOS Distributed Controller</title>
+    <style>
+      :root {
+        --bg: #f4efe7;
+        --panel: rgba(255, 252, 246, 0.88);
+        --line: rgba(79, 54, 34, 0.16);
+        --text: #231a15;
+        --muted: #6f5d52;
+        --accent: #a24a1d;
+        --good: #2a7b57;
+        --warn: #b8692e;
+        --bad: #b63e34;
+      }
+      * { box-sizing: border-box; }
+      body {
+        margin: 0;
+        font-family: "SF Pro Text", "PingFang SC", "Noto Sans SC", sans-serif;
+        color: var(--text);
+        background:
+          radial-gradient(circle at top left, rgba(210, 160, 117, 0.28), transparent 28%),
+          linear-gradient(180deg, #fcf8f2, var(--bg));
+      }
+      .page {
+        width: min(1380px, calc(100vw - 32px));
+        margin: 0 auto;
+        padding: 24px 0 40px;
+      }
+      .hero, .panel {
+        border: 1px solid var(--line);
+        border-radius: 24px;
+        background: var(--panel);
+        box-shadow: 0 16px 40px rgba(60, 40, 20, 0.08);
+      }
+      .hero {
+        padding: 28px;
+        display: grid;
+        gap: 12px;
+      }
+      .hero h1 { margin: 0; font-size: 42px; line-height: 1.02; letter-spacing: -0.04em; }
+      .hero p { margin: 0; color: var(--muted); line-height: 1.7; }
+      .layout {
+        display: grid;
+        grid-template-columns: 360px minmax(0, 1fr);
+        gap: 18px;
+        margin-top: 18px;
+      }
+      .left, .right { display: grid; gap: 18px; align-self: start; }
+      .panel { padding: 20px; }
+      .panel h2, .panel h3 { margin: 0; }
+      .panel p { color: var(--muted); }
+      .field { margin-top: 14px; }
+      label { display: block; margin-bottom: 6px; font-size: 14px; font-weight: 600; }
+      input, textarea, select, button {
+        font: inherit;
+      }
+      input, textarea {
+        width: 100%;
+        border: 1px solid var(--line);
+        border-radius: 14px;
+        padding: 10px 12px;
+        background: #fffdfa;
+      }
+      textarea { min-height: 160px; resize: vertical; }
+      button {
+        border: none;
+        border-radius: 999px;
+        background: linear-gradient(135deg, var(--accent), #6f2808);
+        color: white;
+        padding: 10px 16px;
+        font-weight: 700;
+        cursor: pointer;
+      }
+      button.secondary {
+        background: #f1e7dd;
+        color: var(--text);
+        border: 1px solid var(--line);
+      }
+      .actions { display: flex; gap: 10px; margin-top: 16px; flex-wrap: wrap; }
+      .grid {
+        display: grid;
+        gap: 12px;
+      }
+      .stats {
+        display: grid;
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+        gap: 12px;
+      }
+      .stat, .worker-card, .task-card, .result-card {
+        border: 1px solid var(--line);
+        border-radius: 18px;
+        padding: 14px;
+        background: rgba(255,255,255,0.66);
+      }
+      .stat .label, .meta { color: var(--muted); font-size: 12px; }
+      .stat strong { display: block; margin-top: 8px; font-size: 28px; }
+      .worker-list, .task-list { display: grid; gap: 12px; }
+      .chip {
+        display: inline-block;
+        padding: 4px 10px;
+        border-radius: 999px;
+        font-size: 12px;
+        font-weight: 700;
+      }
+      .chip.online { background: rgba(42,123,87,0.12); color: var(--good); }
+      .chip.offline { background: rgba(182,62,52,0.12); color: var(--bad); }
+      .worker-card h4, .task-card h4 { margin: 0 0 8px; }
+      .worker-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 10px; }
+      .inline { display: grid; grid-template-columns: 1fr auto auto; gap: 8px; margin-top: 8px; }
+      pre {
+        white-space: pre-wrap;
+        word-break: break-word;
+        margin: 0;
+        color: var(--text);
+      }
+      ul { margin: 8px 0 0; padding-left: 18px; }
+      .rating-row { display: flex; gap: 8px; margin-top: 12px; flex-wrap: wrap; }
+      .rating-row button { padding: 8px 12px; }
+      .muted { color: var(--muted); }
+    </style>
+  </head>
+  <body>
+    <div class="page">
+      <section class="hero">
+        <div class="meta">SwarmOS Distributed Controller</div>
+        <h1>多机小模型网络控制台</h1>
+        <p>这个页面连接 controller。在线 worker 会定期心跳注册，controller 会把任务分发给所有在线小模型节点，然后聚合结果、记录耗时和满意度。</p>
+      </section>
+
+      <div class="layout">
+        <div class="left">
+          <section class="panel">
+            <h2>发起任务</h2>
+            <p>输入任务后，controller 会把任务广播给所有在线 worker。</p>
+            <div class="field">
+              <label for="task-input">任务描述</label>
+              <textarea id="task-input" placeholder="例如：请对这个新功能 PR 做多专家评审，并给出最重要的 5 条修改建议。"></textarea>
+            </div>
+            <div class="actions">
+              <button id="run-button">分发到所有在线模型</button>
+              <button class="secondary" id="refresh-button">刷新状态</button>
+            </div>
+            <p id="run-status" class="muted">等待任务</p>
+          </section>
+
+          <section class="panel">
+            <h2>历史任务</h2>
+            <div id="task-list" class="task-list"></div>
+          </section>
+        </div>
+
+        <div class="right">
+          <section class="panel">
+            <h2>节点状态</h2>
+            <div id="stats" class="stats"></div>
+            <div id="worker-list" class="worker-list" style="margin-top: 14px;"></div>
+          </section>
+
+          <section class="panel">
+            <h2>任务结果</h2>
+            <div id="result-empty" class="muted">还没有运行结果。</div>
+            <div id="result-view" class="grid" style="display:none;"></div>
+          </section>
+        </div>
+      </div>
+    </div>
+
+    <script>
+      const state = { workers: [], tasks: [], currentTask: null };
+
+      async function fetchJson(url, options = {}) {
+        const response = await fetch(url, options);
+        const payload = await response.json();
+        if (!response.ok) throw new Error(payload.error || "Request failed");
+        return payload;
+      }
+
+      function escapeHtml(value) {
+        return String(value)
+          .replaceAll("&", "&amp;")
+          .replaceAll("<", "&lt;")
+          .replaceAll(">", "&gt;")
+          .replaceAll('"', "&quot;")
+          .replaceAll("'", "&#39;");
+      }
+
+      function formatTime(value) {
+        if (!value) return "-";
+        const date = new Date(value);
+        if (Number.isNaN(date.getTime())) return value;
+        return date.toLocaleString("zh-CN", { hour12: false });
+      }
+
+      function renderStats(status) {
+        const cards = [
+          { label: "在线节点", value: status.online_workers || 0 },
+          { label: "已知节点", value: status.known_workers || 0 },
+          { label: "保存任务", value: status.tasks_saved || 0 },
+          { label: "调度策略", value: "all-online" },
+        ];
+        document.querySelector("#stats").innerHTML = cards.map((card) => `
+          <div class="stat">
+            <span class="label">${escapeHtml(card.label)}</span>
+            <strong>${escapeHtml(card.value)}</strong>
+          </div>
+        `).join("");
+      }
+
+      function renderWorkers() {
+        const workerList = document.querySelector("#worker-list");
+        if (!state.workers.length) {
+          workerList.innerHTML = `<div class="muted">还没有 worker 上线。先在节点机器上启动 worker。</div>`;
+          return;
+        }
+        workerList.innerHTML = state.workers.map((worker) => `
+          <article class="worker-card">
+            <div style="display:flex;justify-content:space-between;gap:12px;align-items:flex-start;">
+              <div>
+                <h4>${escapeHtml(worker.name)} / ${escapeHtml(worker.worker_id)}</h4>
+                <div class="meta">${escapeHtml(worker.role_name || "-")} · ${escapeHtml(worker.provider || "-")} · ${escapeHtml(worker.model || "-")}</div>
+                <div class="meta">上次心跳：${escapeHtml(formatTime(worker.last_seen_iso))}</div>
+                <div class="meta">地址：${escapeHtml(worker.public_url || "-")}</div>
+              </div>
+              <span class="chip ${worker.online ? "online" : "offline"}">${worker.online ? "ONLINE" : "OFFLINE"}</span>
+            </div>
+            <div class="inline">
+              <input type="text" placeholder="模型名，例如 qwen2.5:7b" id="model-${escapeHtml(worker.worker_id)}" value="${escapeHtml(worker.model || "")}">
+              <button onclick="pullModel('${escapeHtml(worker.worker_id)}')">下载模型</button>
+              <button class="secondary" onclick="activateModel('${escapeHtml(worker.worker_id)}')">切换模型</button>
+            </div>
+          </article>
+        `).join("");
+      }
+
+      function renderTasks() {
+        const taskList = document.querySelector("#task-list");
+        if (!state.tasks.length) {
+          taskList.innerHTML = `<div class="muted">还没有历史任务。</div>`;
+          return;
+        }
+        taskList.innerHTML = state.tasks.map((task) => `
+          <article class="task-card" onclick="loadTask('${escapeHtml(task.task_id)}')">
+            <h4>${escapeHtml(task.task_id)}</h4>
+            <div class="meta">${escapeHtml(formatTime(task.created_at))}</div>
+            <div class="meta">完成 ${escapeHtml(task.completed_worker_count || 0)} / ${escapeHtml(task.online_worker_count || 0)} 个 worker</div>
+            <p>${escapeHtml(task.task_preview || "")}</p>
+          </article>
+        `).join("");
+      }
+
+      function renderTaskDetail(task) {
+        state.currentTask = task;
+        document.querySelector("#result-empty").style.display = "none";
+        const container = document.querySelector("#result-view");
+        container.style.display = "grid";
+
+        const workerCards = (task.worker_results || []).map((item) => `
+          <article class="result-card">
+            <div style="display:flex;justify-content:space-between;gap:12px;">
+              <div>
+                <strong>${escapeHtml(item.worker?.name || item.worker_name || item.worker_id || "-")}</strong>
+                <div class="meta">${escapeHtml(item.worker?.role_name || "-")} · ${escapeHtml(item.worker?.model || item.model || "-")}</div>
+              </div>
+              <div class="meta">${escapeHtml(item.latency_ms || 0)} ms</div>
+            </div>
+            ${item.status === "ok" ? `
+              <p>${escapeHtml(item.proposal.summary || "")}</p>
+              <strong>Recommendations</strong>
+              <ul>${(item.proposal.recommendations || []).map((x) => `<li>${escapeHtml(x)}</li>`).join("")}</ul>
+              <strong>Risks</strong>
+              <ul>${(item.proposal.risks || []).map((x) => `<li>${escapeHtml(x)}</li>`).join("")}</ul>
+            ` : `
+              <p class="muted">调用失败：${escapeHtml(item.error || "unknown error")}</p>
+            `}
+          </article>
+        `).join("");
+
+        container.innerHTML = `
+          <article class="result-card">
+            <h3>聚合结果</h3>
+            <p>${escapeHtml(task.aggregate?.final_summary || "")}</p>
+            <strong>Top Recommendations</strong>
+            <ul>${(task.aggregate?.top_recommendations || []).map((x) => `<li>${escapeHtml(x)}</li>`).join("")}</ul>
+            <strong>Top Risks</strong>
+            <ul>${(task.aggregate?.top_risks || []).map((x) => `<li>${escapeHtml(x)}</li>`).join("")}</ul>
+          </article>
+          <article class="result-card">
+            <h3>指标</h3>
+            <pre>${escapeHtml(JSON.stringify(task.metrics || {}, null, 2))}</pre>
+            <div class="rating-row">
+              <button onclick="rateTask(1)">1 分</button>
+              <button onclick="rateTask(2)">2 分</button>
+              <button onclick="rateTask(3)">3 分</button>
+              <button onclick="rateTask(4)">4 分</button>
+              <button onclick="rateTask(5)">5 分</button>
+            </div>
+          </article>
+          ${workerCards}
+        `;
+      }
+
+      async function refreshAll() {
+        const [status, workers, tasks] = await Promise.all([
+          fetchJson("/api/controller/status"),
+          fetchJson("/api/workers"),
+          fetchJson("/api/tasks"),
+        ]);
+        renderStats(status);
+        state.workers = workers.workers || [];
+        state.tasks = tasks.tasks || [];
+        renderWorkers();
+        renderTasks();
+      }
+
+      async function runTask() {
+        const task = document.querySelector("#task-input").value.trim();
+        if (!task) return;
+        document.querySelector("#run-status").textContent = "正在分发到所有在线 worker...";
+        try {
+          const payload = await fetchJson("/api/tasks/run", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ task }),
+          });
+          renderTaskDetail(payload);
+          document.querySelector("#run-status").textContent = `完成，任务 ${payload.task_id}`;
+          await refreshAll();
+        } catch (error) {
+          document.querySelector("#run-status").textContent = error.message || "运行失败";
+        }
+      }
+
+      async function loadTask(taskId) {
+        const task = await fetchJson(`/api/tasks/${encodeURIComponent(taskId)}`);
+        renderTaskDetail(task);
+      }
+
+      async function pullModel(workerId) {
+        const model = document.querySelector(`#model-${CSS.escape(workerId)}`).value.trim();
+        if (!model) return;
+        await fetchJson(`/api/workers/${encodeURIComponent(workerId)}/pull-model`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ model }),
+        });
+        await refreshAll();
+      }
+
+      async function activateModel(workerId) {
+        const model = document.querySelector(`#model-${CSS.escape(workerId)}`).value.trim();
+        if (!model) return;
+        await fetchJson(`/api/workers/${encodeURIComponent(workerId)}/activate-model`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ model }),
+        });
+        await refreshAll();
+      }
+
+      async function rateTask(rating) {
+        if (!state.currentTask) return;
+        const note = window.prompt("可选：输入对结果满意度的备注", "") || "";
+        const updated = await fetchJson(`/api/tasks/${encodeURIComponent(state.currentTask.task_id)}/rating`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ rating, note }),
+        });
+        renderTaskDetail(updated);
+        await refreshAll();
+      }
+
+      document.querySelector("#run-button").addEventListener("click", runTask);
+      document.querySelector("#refresh-button").addEventListener("click", refreshAll);
+      refreshAll().catch((error) => {
+        document.querySelector("#run-status").textContent = error.message || "初始化失败";
+      });
+    </script>
+  </body>
+</html>

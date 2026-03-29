@@ -1,14 +1,10 @@
 # SwarmForge
 
-SwarmForge is a runnable demo for a routed multi-expert AI system.
+SwarmForge is a runnable demo for a routed multi-expert AI system and a stage-3 distributed small-model network.
 
-It shows how a task can be:
-- parsed into a structured profile
-- routed to a small set of experts
-- answered by parallel expert proposals
-- reviewed by a critic
-- aggregated into a final result
-- compared against a single-model baseline
+The repository now includes two complementary modes:
+- an offline orchestration demo for routing, critique, aggregation, and baseline comparison
+- a controller + worker distributed MVP where multiple machines register online, receive tasks, run local models, and report results back
 
 Language:
 - [中文说明](./README.zh-CN.md)
@@ -34,7 +30,7 @@ python3 -m swarmos_demo.cli \
   --save-json swarmos_demo/outputs/task_01.json
 ```
 
-Run the web demo:
+Run the single-machine web demo:
 
 ```bash
 python3 swarmos_demo/serve.py
@@ -42,11 +38,39 @@ python3 swarmos_demo/serve.py
 
 Then open `http://127.0.0.1:8000`.
 
+Run the distributed controller:
+
+```bash
+python3 -m swarmos_demo.controller --host 0.0.0.0 --port 8010
+```
+
+Run a worker on each node:
+
+```bash
+python3 -m swarmos_demo.worker \
+  --controller-url http://CONTROLLER_IP:8010 \
+  --public-url http://WORKER_IP:8020 \
+  --host 0.0.0.0 \
+  --port 8020 \
+  --provider ollama \
+  --base-url http://127.0.0.1:11434/v1 \
+  --model qwen2.5:7b \
+  --worker-id worker-a \
+  --name Worker-A \
+  --role-key coding_worker \
+  --role-name "Coding Worker"
+```
+
+Then open the distributed dashboard at `http://CONTROLLER_IP:8010`.
+
 ## Main Entry Points
 
 - `swarmos_demo/cli.py`: CLI entry
 - `swarmos_demo/serve.py`: canonical web server
 - `swarmos_demo/web.py`: compatibility wrapper for `serve.py`
+- `swarmos_demo/controller.py`: distributed controller for multi-machine orchestration
+- `swarmos_demo/worker.py`: worker node service for local model execution
+- `swarmos_demo/distributed_common.py`: shared distributed helpers and aggregation
 - `swarmos_demo/core/workflow.py`: orchestration pipeline
 - `swarmos_demo/core/router.py`: expert routing
 - `swarmos_demo/providers/`: mock / OpenAI-compatible / Ollama backends
