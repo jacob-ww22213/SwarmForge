@@ -18,7 +18,7 @@ SwarmForge 现在包含两条能力线：
 - 支持成本统计、冲突检测、TF-IDF 路由、reputation、learned scores
 - 支持 Web 页面演示和多轮协作
 - 支持 controller + worker 多机分发
-- 支持节点心跳、在线状态、任务广播
+- 支持节点心跳、在线状态、MoE 路由与两轮协作
 - 支持 Ollama 模型下载与模型切换
 - 支持分布式运行记录、耗时统计和用户评分
 
@@ -155,7 +155,7 @@ http://控制器IP:8010
 - 查看在线/离线 worker
 - 给 worker 下载 Ollama 模型
 - 给 worker 切换当前模型
-- 输入任务并广播给所有在线节点
+- 输入任务，先做 MoE 路由选择第一轮 worker，再做第二轮 MoA 精炼
 - 查看每个节点的结果、耗时和聚合结果
 - 给本次结果打满意度分数
 
@@ -189,12 +189,13 @@ python3 -m swarmos_demo.cli \
 2. 每个 worker 节点启动后向 controller 周期性发送 heartbeat
 3. controller 维护在线节点列表和节点元信息
 4. 用户在页面输入任务并点击分发
-5. controller 把任务广播到所有在线 worker 的 `/api/infer`
-6. worker 使用本地 provider 和本地模型运行推理
-7. 每个 worker 返回 proposal、耗时、模型信息和完成时间
-8. controller 聚合所有 proposal，生成 final summary、top recommendations、top risks
-9. controller 持久化任务记录到 `swarmos_demo/outputs/distributed/tasks/`
-10. 用户可以对结果做 1 到 5 分满意度打分
+5. controller 先做 MoE 路由，选出第一轮 proposal workers
+6. 第一轮 worker 使用本地 provider 和本地模型运行推理
+7. controller 把第一轮结果发给第二轮 review workers 做 MoA 精炼
+8. 每个 worker 返回 proposal、耗时、模型信息和完成时间
+9. controller 聚合两轮结果，生成 final summary、top recommendations、top risks
+10. controller 持久化任务记录到 `swarmos_demo/outputs/distributed/tasks/`
+11. 用户可以对结果做 1 到 5 分满意度打分
 
 ### 节点 1：输入
 

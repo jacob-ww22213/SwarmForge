@@ -135,13 +135,23 @@
         <div class="left">
           <section class="panel">
             <h2>发起任务</h2>
-            <p>输入任务后，controller 会把任务广播给所有在线 worker。</p>
+            <p>输入任务后，controller 会先做 MoE 稀疏路由选出第一轮 proposal workers，再选出第二轮 review workers 做精炼。</p>
             <div class="field">
               <label for="task-input">任务描述</label>
               <textarea id="task-input" placeholder="例如：请对这个新功能 PR 做多专家评审，并给出最重要的 5 条修改建议。"></textarea>
             </div>
+            <div class="field" style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+              <div>
+                <label for="proposal-top-k">MoE 第一轮 Top-K</label>
+                <input id="proposal-top-k" type="number" min="1" value="3">
+              </div>
+              <div>
+                <label for="review-top-k">MoA 第二轮 Top-K</label>
+                <input id="review-top-k" type="number" min="1" value="2">
+              </div>
+            </div>
             <div class="actions">
-              <button id="run-button">分发到所有在线模型</button>
+              <button id="run-button">执行 MoE + MoA</button>
               <button class="secondary" id="refresh-button">刷新状态</button>
             </div>
             <p id="run-status" class="muted">等待任务</p>
@@ -200,7 +210,7 @@
           { label: "在线节点", value: status.online_workers || 0 },
           { label: "已知节点", value: status.known_workers || 0 },
           { label: "保存任务", value: status.tasks_saved || 0 },
-          { label: "调度策略", value: "all-online" },
+          { label: "调度策略", value: status.dispatch_policy || "moe-top-k + moa-two-round" },
         ];
         document.querySelector("#stats").innerHTML = cards.map((card) => `
           <div class="stat">
@@ -264,6 +274,7 @@
               <div>
                 <strong>${escapeHtml(item.worker?.name || item.worker_name || item.worker_id || "-")}</strong>
                 <div class="meta">${escapeHtml(item.worker?.role_name || "-")} · ${escapeHtml(item.worker?.model || item.model || "-")}</div>
+                <div class="meta">Round ${escapeHtml(item.round_index || "-")} · ${escapeHtml(item.mode || "-")} · routing ${escapeHtml(item.routing_score || "-")}</div>
               </div>
               <div class="meta">${escapeHtml(item.latency_ms || 0)} ms</div>
             </div>
@@ -279,6 +290,16 @@
           </article>
         `).join("");
 
+        const routingCards = `
+          <article class="result-card">
+            <h3>MoE / MoA 路由</h3>
+            <strong>Round 1 Proposal Workers</strong>
+            <ul>${(task.routing?.proposal || []).map((item) => `<li>${escapeHtml(item.name || item.worker_id)} (${escapeHtml(item.template_key || "-")}) score=${escapeHtml(item.score || 0)}${item.reasons ? ` · ${escapeHtml(item.reasons.join(" | "))}` : ""}</li>`).join("")}</ul>
+            <strong>Round 2 Review Workers</strong>
+            <ul>${(task.routing?.review || []).map((item) => `<li>${escapeHtml(item.name || item.worker_id)} (${escapeHtml(item.template_key || "-")}) score=${escapeHtml(item.score || 0)}${item.reasons ? ` · ${escapeHtml(item.reasons.join(" | "))}` : ""}</li>`).join("")}</ul>
+          </article>
+        `;
+
         container.innerHTML = `
           <article class="result-card">
             <h3>聚合结果</h3>
@@ -288,6 +309,7 @@
             <strong>Top Risks</strong>
             <ul>${(task.aggregate?.top_risks || []).map((x) => `<li>${escapeHtml(x)}</li>`).join("")}</ul>
           </article>
+          ${routingCards}
           <article class="result-card">
             <h3>指标</h3>
             <pre>${escapeHtml(JSON.stringify(task.metrics || {}, null, 2))}</pre>
@@ -318,13 +340,15 @@
 
       async function runTask() {
         const task = document.querySelector("#task-input").value.trim();
+        const topK = Number(document.querySelector("#proposal-top-k").value || 3);
+        const reviewTopK = Number(document.querySelector("#review-top-k").value || 2);
         if (!task) return;
-        document.querySelector("#run-status").textContent = "正在分发到所有在线 worker...";
+        document.querySelector("#run-status").textContent = "正在执行 MoE 路由和两轮协作...";
         try {
           const payload = await fetchJson("/api/tasks/run", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ task }),
+            body: JSON.stringify({ task, top_k: topK, review_top_k: reviewTopK }),
           });
           renderTaskDetail(payload);
           document.querySelector("#run-status").textContent = `完成，任务 ${payload.task_id}`;

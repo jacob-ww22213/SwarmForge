@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from collections import Counter
 from typing import Any
 
 from core.types import ExpertProfile, ExpertProposal, clamp
@@ -167,6 +168,8 @@ def build_mock_proposal(expert: ExpertProfile, task: str, context: dict[str, Any
     score = context["scores"][expert.key]
     actions = profile["actions"]
     top_focus = ", ".join(profile["domains"][:2])
+    collaboration_mode = context.get("collaboration_mode", "proposal")
+    peer_results = context.get("peer_results", [])
 
     summary = BASE_SUMMARIES[expert.key]
     suffixes = _summary_suffixes(expert, profile, actions, top_focus)
@@ -182,6 +185,43 @@ def build_mock_proposal(expert: ExpertProfile, task: str, context: dict[str, Any
         _context_risks(expert, profile, actions),
     )
     confidence = clamp(0.55 + score / 2.0, 0.55, 0.92)
+
+    if collaboration_mode == "review":
+        summary = (
+            f"这是第二轮审阅与精炼。基于 {len(peer_results)} 个第一轮输出，"
+            f"我优先保留共识项、压缩重复建议并突出未解决风险。 {summary}"
+        )
+        peer_recommendations = Counter(
+            recommendation
+            for item in peer_results
+            for recommendation in item.get("recommendations", [])
+        )
+        peer_risks = Counter(
+            risk
+            for item in peer_results
+            for risk in item.get("risks", [])
+        )
+        if peer_recommendations:
+            top_consensus = peer_recommendations.most_common(2)
+            recommendations = append_unique(
+                [
+                    f"先保留 round-1 共识项：{text}"
+                    for text, _ in top_consensus
+                ],
+                recommendations,
+            )
+        else:
+            recommendations = append_unique(
+                ["优先合并第一轮提案的重叠建议，再把第二轮算力留给真正的分歧点。"],
+                recommendations,
+            )
+        if peer_risks:
+            top_risk, _ = peer_risks.most_common(1)[0]
+            risks = append_unique(
+                [f"第二轮仍未消解的主要风险：{top_risk}"],
+                risks,
+            )
+        confidence = clamp(confidence + 0.03, 0.55, 0.95)
 
     return ExpertProposal(
         expert_key=expert.key,

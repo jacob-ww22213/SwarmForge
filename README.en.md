@@ -154,7 +154,7 @@ The distributed dashboard supports:
 - online/offline worker visibility
 - Ollama model download per worker
 - model switching per worker
-- broadcast task dispatch to all online nodes
+- MoE top-k routing for proposal workers and MoA second-round review workers
 - per-worker results, latency, and aggregated output
 - 1 to 5 user satisfaction ratings
 
@@ -188,11 +188,12 @@ python3 -m swarmos_demo.cli \
 2. each worker starts, loads its local provider, and sends heartbeats to the controller
 3. the controller maintains online worker state and metadata
 4. the user enters a task in the browser
-5. the controller broadcasts that task to every online worker
-6. each worker runs its local model and returns a proposal plus latency
-7. the controller aggregates all proposals into a final summary, recommendations, and risks
-8. the controller stores the task record under `swarmos_demo/outputs/distributed/tasks/`
-9. the user can rate the output for later evaluation
+5. the controller first routes the task to a top-k proposal worker set
+6. the proposal workers run their local models and return first-round proposals
+7. the controller then routes round-1 outputs to a top-k review worker set for refinement
+8. the controller aggregates both rounds into a final summary, recommendations, and risks
+9. the controller stores the task record under `swarmos_demo/outputs/distributed/tasks/`
+10. the user can rate the output for later evaluation
 
 ### Node 1: Input
 

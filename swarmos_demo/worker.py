@@ -8,7 +8,7 @@ import socket
 import sys
 import threading
 import time
-from dataclasses import asdict
+from dataclasses import asdict, replace
 from http.server import HTTPServer, BaseHTTPRequestHandler
 from pathlib import Path
 from typing import Any
@@ -19,7 +19,9 @@ ROOT_DIR = Path(__file__).resolve().parent
 if str(ROOT_DIR) not in sys.path:
     sys.path.insert(0, str(ROOT_DIR))
 
+from core.task_parser import analyze_task  # noqa: E402
 from distributed_common import (  # noqa: E402
+    build_review_task_prompt,
     build_worker_expert_profile,
     guess_public_url,
     json_request,
@@ -84,6 +86,25 @@ class WorkerRuntime:
                 "models_available": models_available,
             }
 
+    def _build_infer_task(self, task: str, mode: str, peer_results: list[dict[str, Any]]) -> str:
+        if mode == "review" and peer_results:
+            return build_review_task_prompt(task, peer_results)
+        return task
+
+    def _build_expert_for_mode(self, worker_meta: dict[str, Any], mode: str, round_index: int):
+        expert = build_worker_expert_profile(worker_meta)
+        if mode != "review":
+            return expert
+        return replace(
+            expert,
+            role=f"{expert.role} / Round-{round_index} Reviewer",
+            system_prompt=(
+                f"{expert.system_prompt} "
+                "You are in a second-pass MoA refinement round. "
+                "Preserve consensus, resolve disagreements, and surface the highest-risk issues."
+            ),
+        )
+
     def heartbeat_loop(self) -> None:
         while not self.stop_event.is_set():
             try:
@@ -97,13 +118,30 @@ class WorkerRuntime:
                 logger.warning("Heartbeat failed: %s", exc)
             self.stop_event.wait(self.heartbeat_interval)
 
-    def infer(self, task_id: str, task: str) -> dict[str, Any]:
+    def infer(
+        self,
+        task_id: str,
+        task: str,
+        *,
+        mode: str = "proposal",
+        round_index: int = 1,
+        peer_results: list[dict[str, Any]] | None = None,
+        routing_score: float | None = None,
+    ) -> dict[str, Any]:
         started = time.monotonic()
         worker_meta = self.status_payload()
-        expert = build_worker_expert_profile(worker_meta)
+        peer_results = peer_results or []
+        expert = self._build_expert_for_mode(worker_meta, mode, round_index)
         provider = self.build_provider()
-        context = {"profile": {"domains": [], "actions": [], "mentions_demo": True, "risk_level": "medium"}, "scores": {expert.key: 0.75}}
-        proposal = provider.propose(expert, task, context)
+        context = {
+            "profile": analyze_task(task),
+            "scores": {expert.key: float(routing_score or 0.75)},
+            "collaboration_mode": mode,
+            "round_index": round_index,
+            "peer_results": peer_results,
+        }
+        prepared_task = self._build_infer_task(task, mode, peer_results)
+        proposal = provider.propose(expert, prepared_task, context)
         latency_ms = int((time.monotonic() - started) * 1000)
         return {
             "task_id": task_id,
@@ -113,6 +151,10 @@ class WorkerRuntime:
             "provider": self.provider,
             "model": self.model,
             "latency_ms": latency_ms,
+            "mode": mode,
+            "round_index": round_index,
+            "peer_context_count": len(peer_results),
+            "routing_score": round(float(routing_score or 0.75), 3),
             "proposal": asdict(proposal),
             "finished_at": utc_now_iso(),
         }
@@ -173,10 +215,21 @@ class WorkerHandler(BaseHTTPRequestHandler):
         if parsed.path == "/api/infer":
             task = str(body.get("task", "")).strip()
             task_id = str(body.get("task_id", ""))
+            mode = str(body.get("mode", "proposal")).strip() or "proposal"
+            round_index = int(body.get("round_index", 1))
+            peer_results = body.get("peer_results", [])
+            routing_score = body.get("routing_score")
             if not task:
                 return self._json_response({"error": "task is required"}, 400)
             try:
-                result = RUNTIME.infer(task_id, task)  # type: ignore[union-attr]
+                result = RUNTIME.infer(  # type: ignore[union-attr]
+                    task_id,
+                    task,
+                    mode=mode,
+                    round_index=round_index,
+                    peer_results=peer_results if isinstance(peer_results, list) else [],
+                    routing_score=float(routing_score) if routing_score is not None else None,
+                )
             except Exception as exc:
                 return self._json_response({"status": "error", "error": str(exc)}, 500)
             return self._json_response(result)

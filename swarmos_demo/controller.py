@@ -27,7 +27,10 @@ from distributed_common import (  # noqa: E402
     build_distributed_metrics,
     json_request,
     load_json,
+    route_workers,
     save_json,
+    serialize_routing_records,
+    slim_peer_result,
     utc_now_iso,
     utc_timestamp_id,
 )
@@ -134,11 +137,24 @@ def _rate_task(task_id: str, rating: int, note: str) -> dict[str, Any]:
     return record
 
 
-def _dispatch_to_worker(worker: dict[str, Any], task_id: str, task: str) -> dict[str, Any]:
+def _dispatch_to_worker(
+    worker: dict[str, Any],
+    task_id: str,
+    task: str,
+    *,
+    mode: str,
+    round_index: int,
+    routing_score: float,
+    peer_results: list[dict[str, Any]] | None = None,
+) -> dict[str, Any]:
     started = time.monotonic()
     payload = {
         "task_id": task_id,
         "task": task,
+        "mode": mode,
+        "round_index": round_index,
+        "routing_score": routing_score,
+        "peer_results": peer_results or [],
     }
     try:
         response = json_request(
@@ -159,33 +175,111 @@ def _dispatch_to_worker(worker: dict[str, Any], task_id: str, task: str) -> dict
     return response
 
 
-def _run_distributed_task(task: str) -> dict[str, Any]:
+def _run_worker_group(
+    task_id: str,
+    task: str,
+    selected_records: list[dict[str, Any]],
+    *,
+    mode: str,
+    round_index: int,
+    peer_results: list[dict[str, Any]] | None = None,
+) -> list[dict[str, Any]]:
+    if not selected_records:
+        return []
+    results: list[dict[str, Any]] = []
+    with ThreadPoolExecutor(max_workers=len(selected_records)) as pool:
+        futures = [
+            pool.submit(
+                _dispatch_to_worker,
+                record["worker"],
+                task_id,
+                task,
+                mode=mode,
+                round_index=round_index,
+                routing_score=float(record["score"]),
+                peer_results=peer_results,
+            )
+            for record in selected_records
+        ]
+        for future in as_completed(futures):
+            results.append(future.result())
+    results.sort(key=lambda item: ((item.get("round_index") or round_index), item["worker"]["worker_id"]))
+    return results
+
+
+def _run_distributed_task(task: str, top_k: int | None = None, review_top_k: int | None = None) -> dict[str, Any]:
     task_id = utc_timestamp_id("task")
     created_at = utc_now_iso()
     workers = STATE.online_workers()
     if not workers:
         raise ValueError("No online workers available.")
 
-    started = time.monotonic()
-    results: list[dict[str, Any]] = []
-    with ThreadPoolExecutor(max_workers=len(workers)) as pool:
-        futures = [pool.submit(_dispatch_to_worker, worker, task_id, task) for worker in workers]
-        for future in as_completed(futures):
-            results.append(future.result())
+    proposal_k = min(max(top_k or 3, 1), len(workers))
+    review_k = min(max(review_top_k or min(2, len(workers)), 1), len(workers))
 
-    results.sort(key=lambda item: item["worker"]["worker_id"])
+    started = time.monotonic()
+    proposal_routing = route_workers(task, workers, phase="proposal", top_k=proposal_k)
+    proposal_selected = proposal_routing["selected"]
+    proposal_results = _run_worker_group(
+        task_id,
+        task,
+        proposal_selected,
+        mode="proposal",
+        round_index=1,
+    )
+
+    proposal_worker_ids = {record["worker_id"] for record in proposal_selected}
+    peer_results = [slim_peer_result(item) for item in proposal_results if item.get("status") == "ok"]
+    review_routing = route_workers(
+        task,
+        workers,
+        phase="review",
+        top_k=review_k,
+        exclude_worker_ids=proposal_worker_ids,
+        prior_results=proposal_results,
+    )
+    review_selected = review_routing["selected"]
+    if not review_selected:
+        review_routing = route_workers(
+            task,
+            workers,
+            phase="review",
+            top_k=review_k,
+            prior_results=proposal_results,
+        )
+        review_selected = review_routing["selected"]
+
+    review_results = _run_worker_group(
+        task_id,
+        task,
+        review_selected,
+        mode="review",
+        round_index=2,
+        peer_results=peer_results,
+    )
+
+    all_results = proposal_results + review_results
     total_ms = int((time.monotonic() - started) * 1000)
-    aggregate = aggregate_distributed_results(task, results)
+    aggregate = aggregate_distributed_results(task, proposal_results, review_results)
     metrics = build_distributed_metrics(
-        results,
+        all_results,
         controller_total_ms=total_ms,
         online_worker_count=len(workers),
+        proposal_selected_count=len(proposal_selected),
+        review_selected_count=len(review_selected),
+        proposal_completed_count=len([item for item in proposal_results if item.get("status") == "ok"]),
+        review_completed_count=len([item for item in review_results if item.get("status") == "ok"]),
     )
     record = {
         "task_id": task_id,
         "created_at": created_at,
         "task": task,
-        "dispatch_policy": "all-online",
+        "profile": proposal_routing["profile"],
+        "dispatch_policy": "moe-top-k + moa-two-round",
+        "routing": {
+            "proposal": serialize_routing_records(proposal_routing["selected"]),
+            "review": serialize_routing_records(review_routing["selected"]),
+        },
         "workers": [
             {
                 "worker_id": worker["worker_id"],
@@ -197,7 +291,11 @@ def _run_distributed_task(task: str) -> dict[str, Any]:
             }
             for worker in workers
         ],
-        "worker_results": results,
+        "rounds": {
+            "proposal": proposal_results,
+            "review": review_results,
+        },
+        "worker_results": all_results,
         "aggregate": aggregate,
         "metrics": metrics,
     }
@@ -250,6 +348,7 @@ class ControllerHandler(SimpleHTTPRequestHandler):
                     "online_workers": len([item for item in workers if item["online"]]),
                     "known_workers": len(workers),
                     "tasks_saved": len(_list_task_records(limit=1000)),
+                    "dispatch_policy": "moe-top-k + moa-two-round",
                 }
             )
 
@@ -285,8 +384,15 @@ class ControllerHandler(SimpleHTTPRequestHandler):
             task = str(body.get("task", "")).strip()
             if not task:
                 return self._json_response({"error": "task is required"}, 400)
+            top_k_raw = body.get("top_k", 3)
+            review_top_k_raw = body.get("review_top_k", 2)
             try:
-                record = _run_distributed_task(task)
+                top_k = max(int(top_k_raw), 1)
+                review_top_k = max(int(review_top_k_raw), 1)
+            except (TypeError, ValueError):
+                return self._json_response({"error": "top_k and review_top_k must be integers"}, 400)
+            try:
+                record = _run_distributed_task(task, top_k=top_k, review_top_k=review_top_k)
             except ValueError as exc:
                 return self._json_response({"error": str(exc)}, 400)
             return self._json_response(record)

@@ -19,7 +19,8 @@ What it demonstrates:
 - HTTP retry with exponential backoff for real providers
 - controller + worker multi-machine orchestration
 - worker heartbeats and online status tracking
-- task broadcast to all online worker nodes
+- MoE sparse routing to a top-k proposal worker set
+- MoA second-round review and refinement on a separate top-k reviewer set
 - per-worker model pull / model switch support for Ollama
 - distributed task trace, latency, completion rate, and user rating capture
 
@@ -126,7 +127,7 @@ The distributed UI lets you:
 - view online and offline worker nodes
 - trigger Ollama model downloads on a worker
 - switch the active model on a worker
-- broadcast a task to all online workers
+- route the task to a proposal top-k and a review top-k
 - inspect per-worker proposals and aggregate output
 - rate the final result from 1 to 5
 
