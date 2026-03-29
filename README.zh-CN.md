@@ -64,6 +64,38 @@ python3 -m venv .venv
 ./.venv/bin/python -m pytest
 ```
 
+## Codex Skill 启动
+
+仓库里已经自带一个本地 skill：
+
+- `.codex/skills/swarmforge-demo-runner/SKILL.md`
+
+用途：
+- 启动 controller
+- 启动 mock worker
+- 启动 Ollama worker
+- 检查 demo 状态
+- 停止本地 demo
+
+对应脚本在：
+- `.codex/skills/swarmforge-demo-runner/scripts/start_controller.sh`
+- `.codex/skills/swarmforge-demo-runner/scripts/start_mock_worker.sh`
+- `.codex/skills/swarmforge-demo-runner/scripts/start_ollama_worker.sh`
+- `.codex/skills/swarmforge-demo-runner/scripts/check_local_demo.sh`
+- `.codex/skills/swarmforge-demo-runner/scripts/stop_local_demo.sh`
+
+如果别人下载仓库后也使用 Codex，可以直接说：
+
+```text
+使用 swarmforge-demo-runner 启动本地演示
+```
+
+或者直接执行脚本：
+
+```bash
+./.codex/skills/swarmforge-demo-runner/scripts/start_controller.sh
+```
+
 ## 如何运行 Demo
 
 ### 1. 运行 CLI Demo

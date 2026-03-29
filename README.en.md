@@ -63,6 +63,32 @@ Run tests:
 ./.venv/bin/python -m pytest
 ```
 
+## Codex Skill Launcher
+
+This repository now includes a local Codex skill:
+
+- `.codex/skills/swarmforge-demo-runner/SKILL.md`
+
+It can be used to:
+- start the controller
+- start mock workers
+- start Ollama workers
+- verify local demo status
+- stop the local demo
+
+Bundled scripts:
+- `.codex/skills/swarmforge-demo-runner/scripts/start_controller.sh`
+- `.codex/skills/swarmforge-demo-runner/scripts/start_mock_worker.sh`
+- `.codex/skills/swarmforge-demo-runner/scripts/start_ollama_worker.sh`
+- `.codex/skills/swarmforge-demo-runner/scripts/check_local_demo.sh`
+- `.codex/skills/swarmforge-demo-runner/scripts/stop_local_demo.sh`
+
+If another Codex user has the repo locally, they can invoke it with a request like:
+
+```text
+Use swarmforge-demo-runner to launch the local demo
+```
+
 ## How To Run the Demo
 
 ### 1. Run the CLI Demo
