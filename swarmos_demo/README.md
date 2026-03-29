@@ -33,16 +33,23 @@ python3 -m swarmos_demo.cli \
   --save-json swarmos_demo/outputs/task_01.json
 ```
 
-Run the web demo from the repo root:
+Run the web demo from the repo root with the canonical entry:
 
 ```bash
-python3 -m swarmos_demo.web --host 127.0.0.1 --port 8000
+python3 swarmos_demo/serve.py
 ```
 
-Or from the `swarmos_demo/` directory:
+You can also run it from inside the `swarmos_demo/` directory:
 
 ```bash
-python3 web.py --host 127.0.0.1 --port 8000
+python3 serve.py
+```
+
+Compatibility aliases still work:
+
+```bash
+python3 -m swarmos_demo.web
+python3 swarmos_demo/web.py
 ```
 
 Then open:
@@ -53,12 +60,12 @@ http://127.0.0.1:8000
 
 The web demo includes:
 - a single-model baseline comparison block
-- persisted run history under `swarmos_demo/outputs/web_history/`
-- clickable trace playback from the browser UI
+- saved traces under `swarmos_demo/outputs/`
+- replay and multi-round collaboration in the browser UI
 
 Important:
-- `python3 -m swarmos_demo.web` must be run from the repo root
-- if you are already inside `swarmos_demo/`, use `python3 web.py`
+- `serve.py` is the only real web server implementation
+- `web.py` is now just a compatibility wrapper to avoid breaking old commands
 
 Run with a task file:
 
@@ -145,11 +152,20 @@ python3 cli.py --provider ollama --model qwen2.5:7b --task "用本地模型跑�
 
 ## Testing
 
+Create a local test environment:
+
 ```bash
-python3 -m pytest tests/ -v
+python3 -m venv .venv
+./.venv/bin/pip install -r requirements-dev.txt
 ```
 
-114 tests covering all A-line modules: types, task parser, router, TF-IDF,
+Run the tests:
+
+```bash
+./.venv/bin/python -m pytest
+```
+
+114+ tests covering all A-line modules: types, task parser, router, TF-IDF,
 reputation, learned routing, cost, conflict, weighting, workflow, serve, CLI.
 
 ## Project structure
@@ -157,7 +173,8 @@ reputation, learned routing, cost, conflict, weighting, workflow, serve, CLI.
 ```text
 swarmos_demo/
 ├── cli.py                    # CLI entry point
-├── serve.py                  # Web demo server (V3, zero deps)
+├── serve.py                  # Canonical web demo server (zero deps)
+├── web.py                    # Compatibility wrapper for serve.py
 ├── swarmos_demo.py           # Backward-compatible thin wrapper
 ├── evaluate.py               # Trace evaluation script
 ├── demo_types.py             # Re-export for backward compat
@@ -241,9 +258,9 @@ Each run produces a trace with:
 }
 ```
 
-## Web Demo (V3)
+## Web Demo
 
-Start the web server (zero dependencies, pure stdlib). V4: supports all providers.
+Start the canonical web server (zero dependencies, pure stdlib). Supports all providers.
 
 ```bash
 python3 serve.py                                       # mock (default)
@@ -281,12 +298,12 @@ python3 cli.py --task "请评估把法律、医疗、代码专家接入同一系
 
 - `swarmos_demo/swarmos_demo.py`: backward-compatible wrapper entrypoint
 - `swarmos_demo/cli.py`: CLI entrypoint
-- `swarmos_demo/web.py`: local zero-dependency web demo server
-- `swarmos_demo/web_history.py`: local run-history persistence and replay metadata
-- `swarmos_demo/core/`: task parsing, routing, workflow orchestration, serialization, storage
+- `swarmos_demo/serve.py`: canonical web demo server
+- `swarmos_demo/web.py`: compatibility alias that forwards to `serve.py`
+- `swarmos_demo/core/`: task parsing, routing, workflow orchestration, storage
 - `swarmos_demo/providers/`: mock, openai-compatible, ollama
 - `swarmos_demo/experts/`: registry, proposal strategies, critic, aggregator
 - `swarmos_demo/reporting/`: console and markdown renderers
-- `swarmos_demo/web_static/`: single-page UI assets
+- `swarmos_demo/web/`: single-page UI assets
 - `swarmos_demo/examples/`: sample task files
 - `swarmos_demo/docs/`: technical docs, task split, integration contract
