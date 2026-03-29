@@ -7,7 +7,13 @@ This project follows a lightweight SemVer-style versioning scheme while the prod
 - `PATCH`: bug fixes, documentation fixes, test-only changes, or small UX improvements
 
 Current version:
-- `0.6.2`
+- `0.6.3`
+
+## [0.6.3] - 2026-03-30
+
+Changed:
+- added a bootstrap script for brand-new remote node machines that clones the repo, prepares a venv, and starts an Ollama worker
+- updated docs to explain that `swarmforge-demo-runner` is a repo-local skill and cannot be used before the repository exists locally
 
 ## [0.6.2] - 2026-03-30
 

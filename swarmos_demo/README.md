@@ -132,6 +132,16 @@ Open the distributed dashboard:
 http://CONTROLLER_IP:8010
 ```
 
+For a brand-new machine with no local checkout yet, bootstrap the node first:
+
+```bash
+CONTROLLER_URL=http://31.97.191.47:8010 \
+PUBLIC_HOST=THIS_NODE_IP \
+bash -c "$(curl -fsSL https://raw.githubusercontent.com/jacob-ww22213/SwarmForge/main/scripts/bootstrap-node.sh)"
+```
+
+This avoids the common failure where a repo-local skill is invoked before the repository exists.
+
 For a one-machine server deployment, you can also use the bundled script from the repo root:
 
 ```bash

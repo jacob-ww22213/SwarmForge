@@ -121,6 +121,18 @@ This repository now includes a local Codex skill:
 
 - `.codex/skills/swarmforge-demo-runner/SKILL.md`
 
+For a brand-new machine that does not have this repository yet, use the bootstrap script first instead of the repo-local skill:
+
+```bash
+CONTROLLER_URL=http://31.97.191.47:8010 \
+PUBLIC_HOST=THIS_NODE_IP \
+bash -c "$(curl -fsSL https://raw.githubusercontent.com/jacob-ww22213/SwarmForge/main/scripts/bootstrap-node.sh)"
+```
+
+Why:
+- `swarmforge-demo-runner` is a repo-local skill
+- the repository must already exist on disk before Codex can discover that skill
+
 It can be used to:
 - start the controller
 - start mock workers

@@ -140,6 +140,16 @@ This repository also includes a local Codex skill for that flow:
 
 - `.codex/skills/swarmforge-demo-runner/SKILL.md`
 
+For a brand-new machine that does not have the repository yet, use the bootstrap script instead of the repo-local skill:
+
+```bash
+CONTROLLER_URL=http://31.97.191.47:8010 \
+PUBLIC_HOST=THIS_NODE_IP \
+bash -c "$(curl -fsSL https://raw.githubusercontent.com/jacob-ww22213/SwarmForge/main/scripts/bootstrap-node.sh)"
+```
+
+The repo-local skill only works after the repository already exists on disk.
+
 ## Main Entry Points
 
 - `swarmos_demo/cli.py`: CLI entry

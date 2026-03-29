@@ -122,6 +122,18 @@ CONTROLLER_BIND_HOST=0.0.0.0 CONTROLLER_PUBLIC_HOST=127.0.0.1 ./scripts/start-lo
 
 - `.codex/skills/swarmforge-demo-runner/SKILL.md`
 
+如果是“全新电脑，仓库还没拉下来”，不要先直接用这个仓库内 skill。先用 bootstrap 脚本：
+
+```bash
+CONTROLLER_URL=http://31.97.191.47:8010 \
+PUBLIC_HOST=当前机器IP \
+bash -c "$(curl -fsSL https://raw.githubusercontent.com/jacob-ww22213/SwarmForge/main/scripts/bootstrap-node.sh)"
+```
+
+原因很简单：
+- `swarmforge-demo-runner` 是仓库内 skill
+- 只有仓库已经存在，本地才能找到这个 skill
+
 用途：
 - 启动 controller
 - 启动 mock worker
