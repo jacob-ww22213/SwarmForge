@@ -4,15 +4,15 @@
 - Task: 请设计一个面向投资人展示的群智引擎 demo。 要求： 1. 一次运行就能看出专家分工 2. 输出要兼顾技术可信度和商业表达 3. 给出主要风险、验证指标和下一阶段里程碑 4. 保持两周内可以完成的实现范围
 
 ## Routed Experts
-- `planner` / Planner: score=0.630
-- `product_strategist` / Product Strategist: score=0.730
-- `coding_engineer` / Coding Engineer: score=0.590
-- `research_scientist` / Research Scientist: score=0.510
+- `planner` / Planner: score=0.680
+- `product_strategist` / Product Strategist: score=0.780
+- `coding_engineer` / Coding Engineer: score=0.640
+- `research_scientist` / Research Scientist: score=0.560
 
 ## Expert Proposals
 ### Planner
 - Role: Turns the task into a concrete execution plan.
-- Confidence: 0.86
+- Confidence: 0.89
 - Summary: 这个任务适合先做一个最小闭环：输入任务，路由到少量专家，生成多份提案，加入批判环节，再聚合输出。
 
 Recommendations:
@@ -23,7 +23,6 @@ Recommendations:
 
 Risks:
 - 如果 demo 目标太大，容易变成空泛展示而不是可运行原型。
-
 ### Product Strategist
 - Role: Focuses on user value, workflow fit, and commercial framing.
 - Confidence: 0.92
@@ -38,10 +37,9 @@ Recommendations:
 Risks:
 - 如果任务场景不够具体，外部观众会觉得它只是概念片。
 - 如果输出太技术化，外部观众会看不出为什么这比普通工作流更强。
-
 ### Coding Engineer
 - Role: Focuses on implementation detail, interfaces, and MVP scope.
-- Confidence: 0.84
+- Confidence: 0.87
 - Summary: 最小工程实现应尽量少依赖，优先做一个单命令可运行的 CLI，并把 trace 和结果保存下来。 既然任务明确要求可运行，工程可执行性比术语完整性更重要。
 
 Recommendations:
@@ -54,10 +52,9 @@ Risks:
 - 引入过多依赖会拖慢第一次跑通。
 - 如果 CLI 输出不清晰，用户看不出协作带来的价值。
 - 如果一边重构一边改输出协议，联调阶段会非常痛苦。
-
 ### Research Scientist
 - Role: Focuses on baselines, experiments, evaluation, and ablations.
-- Confidence: 0.81
+- Confidence: 0.83
 - Summary: 如果想判断 demo 有没有价值，必须同时保存基线、路由结果、协作收益和失败模式。
 
 Recommendations:
@@ -102,7 +99,7 @@ Risks:
 |--------|----------|--------------|
 | Recommendations | 2 | 16 |
 | Risks identified | 2 | 9 |
-| Confidence | 0.60 | 0.86 (avg) |
+| Confidence | 0.60 | 0.88 (avg) |
 | Perspectives | 1 (generalist) | 4 (specialists) |
 
 ## Final Output

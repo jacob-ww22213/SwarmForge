@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from typing import Any
 
-from core.types import ExpertProfile, ExpertProposal
+from core.types import AggregateResult, BaselineResult, CritiqueReport, ExpertProposal, RoutedExpert
 
 
 def _render_baseline_section(
@@ -44,17 +44,15 @@ def _render_baseline_section(
     lines.append(f"| Perspectives | 1 (generalist) | {len(proposals)} (specialists) |")
     lines.append("")
     return lines
-
-
 def render_markdown_report(
     task: str,
     provider_mode: str,
-    routed: list[tuple[ExpertProfile, float]],
+    routed: list[RoutedExpert],
     proposals: list[ExpertProposal],
-    critique: dict[str, Any],
-    aggregate: dict[str, Any],
+    critique: CritiqueReport,
+    aggregate: AggregateResult,
     *,
-    baseline: dict[str, Any] | None = None,
+    baseline: BaselineResult | None = None,
 ) -> str:
     lines: list[str] = []
     lines.append("# SwarmOS Demo Report")
@@ -63,8 +61,8 @@ def render_markdown_report(
     lines.append(f"- Task: {task}")
     lines.append("")
     lines.append("## Routed Experts")
-    for expert, score in routed:
-        lines.append(f"- `{expert.key}` / {expert.name}: score={score:.3f}")
+    for expert in routed:
+        lines.append(f"- `{expert.key}` / {expert.name}: score={expert.score:.3f}")
     lines.append("")
     lines.append("## Expert Proposals")
     for proposal in proposals:
@@ -80,17 +78,17 @@ def render_markdown_report(
         lines.append("Risks:")
         for item in proposal.risks:
             lines.append(f"- {item}")
-        lines.append("")
+    lines.append("")
     lines.append("## Critic Focus")
-    for item in critique.get("focus", []):
+    for item in critique["focus"]:
         lines.append(f"- {item}")
     lines.append("")
-    if critique.get("duplicates"):
+    if critique["duplicates"]:
         lines.append("## Critic Duplicate Signals")
         for item in critique["duplicates"]:
             lines.append(f"- {item}")
         lines.append("")
-    if critique.get("next_checks"):
+    if critique["next_checks"]:
         lines.append("## Critic Next Checks")
         for item in critique["next_checks"]:
             lines.append(f"- {item}")

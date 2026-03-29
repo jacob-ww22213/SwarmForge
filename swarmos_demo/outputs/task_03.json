@@ -1,6 +1,6 @@
 {
-  "run_id": "40f858232cc5",
-  "timestamp": "2026-03-29T05:14:12Z",
+  "run_id": "2782e48d0e3b",
+  "timestamp": "2026-03-29T07:21:00Z",
   "task": "请设计一个面向投资人展示的群智引擎 demo。 要求： 1. 一次运行就能看出专家分工 2. 输出要兼顾技术可信度和商业表达 3. 给出主要风险、验证指标和下一阶段里程碑 4. 保持两周内可以完成的实现范围",
   "provider": "mock",
   "profile": {
@@ -22,22 +22,26 @@
     {
       "key": "planner",
       "name": "Planner",
-      "score": 0.63
+      "role": "Turns the task into a concrete execution plan.",
+      "score": 0.68
     },
     {
       "key": "product_strategist",
       "name": "Product Strategist",
-      "score": 0.73
+      "role": "Focuses on user value, workflow fit, and commercial framing.",
+      "score": 0.78
     },
     {
       "key": "coding_engineer",
       "name": "Coding Engineer",
-      "score": 0.59
+      "role": "Focuses on implementation detail, interfaces, and MVP scope.",
+      "score": 0.64
     },
     {
       "key": "research_scientist",
       "name": "Research Scientist",
-      "score": 0.51
+      "role": "Focuses on baselines, experiments, evaluation, and ablations.",
+      "score": 0.56
     }
   ],
   "proposals": [
@@ -45,7 +49,7 @@
       "expert_key": "planner",
       "expert_name": "Planner",
       "role": "Turns the task into a concrete execution plan.",
-      "score": 0.63,
+      "score": 0.68,
       "summary": "这个任务适合先做一个最小闭环：输入任务，路由到少量专家，生成多份提案，加入批判环节，再聚合输出。",
       "recommendations": [
         "把流程固定为 路由 -> 提案 -> 批判 -> 聚合 -> 保存 trace。",
@@ -56,13 +60,13 @@
       "risks": [
         "如果 demo 目标太大，容易变成空泛展示而不是可运行原型。"
       ],
-      "confidence": 0.86
+      "confidence": 0.89
     },
     {
       "expert_key": "product_strategist",
       "expert_name": "Product Strategist",
       "role": "Focuses on user value, workflow fit, and commercial framing.",
-      "score": 0.73,
+      "score": 0.78,
       "summary": "demo 不需要证明终极智能，只需要让人一眼看懂系统为什么比单模型流程更可控、更可解释。 当前目标应是让用户在 30 秒内看懂系统流程。",
       "recommendations": [
         "首个 demo 选一个大家一看就懂的任务，例如 MVP 规划或代码审查。",
@@ -80,7 +84,7 @@
       "expert_key": "coding_engineer",
       "expert_name": "Coding Engineer",
       "role": "Focuses on implementation detail, interfaces, and MVP scope.",
-      "score": 0.59,
+      "score": 0.64,
       "summary": "最小工程实现应尽量少依赖，优先做一个单命令可运行的 CLI，并把 trace 和结果保存下来。 既然任务明确要求可运行，工程可执行性比术语完整性更重要。",
       "recommendations": [
         "用 Python 标准库实现 CLI，减少环境安装成本。",
@@ -93,13 +97,13 @@
         "如果 CLI 输出不清晰，用户看不出协作带来的价值。",
         "如果一边重构一边改输出协议，联调阶段会非常痛苦。"
       ],
-      "confidence": 0.84
+      "confidence": 0.87
     },
     {
       "expert_key": "research_scientist",
       "expert_name": "Research Scientist",
       "role": "Focuses on baselines, experiments, evaluation, and ablations.",
-      "score": 0.51,
+      "score": 0.56,
       "summary": "如果想判断 demo 有没有价值，必须同时保存基线、路由结果、协作收益和失败模式。",
       "recommendations": [
         "记录每次路由分数和被选中的专家，作为后续评测数据。",
@@ -112,7 +116,7 @@
         "只展示成功案例会掩盖失败边界。",
         "没有失败样例时，很容易高估协作机制的真实收益。"
       ],
-      "confidence": 0.81
+      "confidence": 0.83
     }
   ],
   "critique": {

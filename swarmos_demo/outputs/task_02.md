@@ -4,10 +4,10 @@
 - Task: 请设计一个多专家协作的代码审查 demo。 要求： 1. 输入一段 PR 说明或代码变更摘要 2. 至少路由到规划、工程、评测三个专家 3. 输出需要包含主要问题、修改建议、风险项 4. 给出后续如何接入 CI 或代码评审流程
 
 ## Routed Experts
-- `planner` / Planner: score=0.770
-- `coding_engineer` / Coding Engineer: score=0.730
-- `research_scientist` / Research Scientist: score=0.570
-- `product_strategist` / Product Strategist: score=0.450
+- `planner` / Planner: score=0.820
+- `coding_engineer` / Coding Engineer: score=0.780
+- `research_scientist` / Research Scientist: score=0.620
+- `product_strategist` / Product Strategist: score=0.500
 
 ## Expert Proposals
 ### Planner
@@ -24,7 +24,6 @@ Recommendations:
 
 Risks:
 - 如果 demo 目标太大，容易变成空泛展示而不是可运行原型。
-
 ### Coding Engineer
 - Role: Focuses on implementation detail, interfaces, and MVP scope.
 - Confidence: 0.92
@@ -40,10 +39,9 @@ Recommendations:
 Risks:
 - 引入过多依赖会拖慢第一次跑通。
 - 如果 CLI 输出不清晰，用户看不出协作带来的价值。
-
 ### Research Scientist
 - Role: Focuses on baselines, experiments, evaluation, and ablations.
-- Confidence: 0.83
+- Confidence: 0.86
 - Summary: 如果想判断 demo 有没有价值，必须同时保存基线、路由结果、协作收益和失败模式。 这个任务里，评测设计会直接决定 demo 的说服力。
 
 Recommendations:
@@ -57,10 +55,9 @@ Risks:
 - 没有强基线会导致 demo 看起来聪明但无法证明收益。
 - 只展示成功案例会掩盖失败边界。
 - 没有失败样例时，很容易高估协作机制的真实收益。
-
 ### Product Strategist
 - Role: Focuses on user value, workflow fit, and commercial framing.
-- Confidence: 0.78
+- Confidence: 0.80
 - Summary: demo 不需要证明终极智能，只需要让人一眼看懂系统为什么比单模型流程更可控、更可解释。 当前目标应是让用户在 30 秒内看懂系统流程。
 
 Recommendations:
@@ -106,7 +103,7 @@ Risks:
 |--------|----------|--------------|
 | Recommendations | 2 | 20 |
 | Risks identified | 2 | 8 |
-| Confidence | 0.60 | 0.86 (avg) |
+| Confidence | 0.60 | 0.88 (avg) |
 | Perspectives | 1 (generalist) | 4 (specialists) |
 
 ## Final Output

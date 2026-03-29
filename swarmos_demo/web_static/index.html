@@ -1,0 +1,238 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>SwarmOS Web Demo</title>
+    <link rel="stylesheet" href="/styles.css" />
+  </head>
+  <body>
+    <div class="page-shell">
+      <header class="hero">
+        <div class="hero-copy">
+          <p class="eyebrow">SwarmOS Demo</p>
+          <h1>可视化查看路由、专家协作、批判、Baseline 与最终聚合结果</h1>
+          <p class="hero-text">
+            这个页面直接调用当前本地 workflow。默认使用离线 mock provider，方便先验证系统链路、单模型 baseline 和多专家协作之间的差异。
+          </p>
+        </div>
+        <div class="hero-panel">
+          <div class="hero-stat">
+            <span class="label">默认模式</span>
+            <strong>Offline Mock</strong>
+          </div>
+          <div class="hero-stat">
+            <span class="label">推荐用途</span>
+            <strong>本地演示 / 联调</strong>
+          </div>
+          <div class="hero-stat">
+            <span class="label">运行命令</span>
+            <code>python3 -m swarmos_demo.web</code>
+          </div>
+        </div>
+      </header>
+
+      <main class="layout">
+        <div class="left-stack">
+          <section class="panel input-panel">
+            <div class="panel-header">
+              <h2>运行配置</h2>
+              <p>输入任务，选择 provider，直接运行系统。</p>
+            </div>
+
+            <div class="field-group">
+              <label for="example-select">示例任务</label>
+              <select id="example-select">
+                <option value="">选择一个样例任务</option>
+              </select>
+            </div>
+
+            <div class="field-group">
+              <label for="task-input">任务描述</label>
+              <textarea
+                id="task-input"
+                rows="10"
+                placeholder="例如：请设计一个多专家协作的代码审查 demo，并展示每个专家的职责。"
+              ></textarea>
+            </div>
+
+            <div class="grid two-cols">
+              <div class="field-group">
+                <label for="provider-select">Provider</label>
+                <select id="provider-select">
+                  <option value="mock">mock</option>
+                  <option value="openai-compatible">openai-compatible</option>
+                  <option value="ollama">ollama</option>
+                </select>
+              </div>
+              <div class="field-group">
+                <label for="top-k-input">Top-K 专家数</label>
+                <input id="top-k-input" type="number" min="1" max="6" value="3" />
+              </div>
+            </div>
+
+            <details class="advanced-panel">
+              <summary>高级 provider 配置</summary>
+              <div class="grid two-cols advanced-grid">
+                <div class="field-group">
+                  <label for="base-url-input">Base URL</label>
+                  <input id="base-url-input" type="text" placeholder="http://127.0.0.1:11434/v1" />
+                </div>
+                <div class="field-group">
+                  <label for="model-input">Model</label>
+                  <input id="model-input" type="text" placeholder="qwen2.5:7b" />
+                </div>
+              </div>
+              <div class="field-group">
+                <label for="api-key-input">API Key</label>
+                <input id="api-key-input" type="password" placeholder="仅 openai-compatible 需要" />
+              </div>
+            </details>
+
+            <div class="actions">
+              <button id="run-button" class="primary-button">运行 Demo</button>
+              <span id="run-status" class="status-text">准备就绪</span>
+            </div>
+          </section>
+
+          <section class="panel history-panel">
+            <div class="panel-header">
+              <h2>运行历史 / Trace 回放</h2>
+              <p>每次运行都会自动保存到本地。点击任何一条记录即可回放结果。</p>
+            </div>
+            <div id="history-empty" class="mini-empty">还没有历史记录</div>
+            <div id="history-list" class="history-list"></div>
+          </section>
+        </div>
+
+        <section class="panel output-panel">
+          <div class="panel-header">
+            <h2>运行结果</h2>
+            <p>这里会展示结构化输出、单模型 baseline 对比和最终聚合结果。</p>
+          </div>
+
+          <div id="empty-state" class="empty-state">
+            <h3>还没有结果</h3>
+            <p>选择一个样例或输入任务后，点击“运行 Demo”。</p>
+          </div>
+
+          <div id="results" class="results hidden">
+            <section class="result-block">
+              <h3>任务画像</h3>
+              <div id="profile-cards" class="profile-cards"></div>
+            </section>
+
+            <section class="result-block">
+              <h3>路由结果</h3>
+              <div id="routed-experts" class="routed-grid"></div>
+            </section>
+
+            <section class="result-block">
+              <h3>专家提案</h3>
+              <div id="proposal-cards" class="proposal-grid"></div>
+            </section>
+
+            <section class="result-block">
+              <h3>单模型 Baseline 对比</h3>
+              <div class="comparison-grid">
+                <article class="sub-panel comparison-card">
+                  <h4>Single Expert Baseline</h4>
+                  <p class="compare-meta">
+                    <span id="baseline-expert-name">-</span>
+                    <span id="baseline-expert-score" class="confidence-chip">-</span>
+                  </p>
+                  <p id="baseline-summary"></p>
+                  <div>
+                    <strong>Recommendations</strong>
+                    <ul id="baseline-recommendations"></ul>
+                  </div>
+                  <div>
+                    <strong>Risks</strong>
+                    <ul id="baseline-risks"></ul>
+                  </div>
+                  <div>
+                    <strong>Notes</strong>
+                    <ul id="baseline-notes"></ul>
+                  </div>
+                </article>
+
+                <article class="sub-panel comparison-card collaboration-card">
+                  <h4>Collaborative Output</h4>
+                  <p class="compare-meta">
+                    <span id="collaboration-experts-count">-</span>
+                    <span id="collaboration-critique-count" class="confidence-chip">-</span>
+                  </p>
+                  <p id="collaboration-summary"></p>
+                  <div>
+                    <strong>Consensus</strong>
+                    <ul id="comparison-consensus"></ul>
+                  </div>
+                  <div>
+                    <strong>Key Risks</strong>
+                    <ul id="comparison-risks"></ul>
+                  </div>
+                </article>
+              </div>
+            </section>
+
+            <section class="result-block">
+              <h3>批判器</h3>
+              <div class="critic-grid">
+                <div class="sub-panel">
+                  <h4>Focus</h4>
+                  <ul id="critic-focus"></ul>
+                </div>
+                <div class="sub-panel">
+                  <h4>Duplicates</h4>
+                  <ul id="critic-duplicates"></ul>
+                </div>
+                <div class="sub-panel">
+                  <h4>Next Checks</h4>
+                  <ul id="critic-checks"></ul>
+                </div>
+              </div>
+            </section>
+
+            <section class="result-block final-block">
+              <h3>最终聚合</h3>
+              <div class="final-summary">
+                <h4>Final Summary</h4>
+                <p id="final-summary"></p>
+              </div>
+              <div class="critic-grid">
+                <div class="sub-panel">
+                  <h4>Consensus</h4>
+                  <ul id="aggregate-consensus"></ul>
+                </div>
+                <div class="sub-panel">
+                  <h4>Next Steps</h4>
+                  <ul id="aggregate-next-steps"></ul>
+                </div>
+                <div class="sub-panel">
+                  <h4>Key Risks</h4>
+                  <ul id="aggregate-risks"></ul>
+                </div>
+              </div>
+            </section>
+
+            <section class="result-block raw-block">
+              <h3>附加输出</h3>
+              <div class="raw-grid">
+                <div class="sub-panel">
+                  <h4>Console Report</h4>
+                  <pre id="console-report"></pre>
+                </div>
+                <div class="sub-panel">
+                  <h4>Markdown Report</h4>
+                  <pre id="markdown-report"></pre>
+                </div>
+              </div>
+            </section>
+          </div>
+        </section>
+      </main>
+    </div>
+
+    <script src="/app.js" defer></script>
+  </body>
+</html>

@@ -10,7 +10,7 @@ from typing import Any
 
 from core.task_parser import analyze_task
 from core.router import route_experts
-from core.types import normalize_task
+from core.types import RoutedExpert, normalize_task
 from providers import build_provider
 from reporting.console import render_console_report
 from reporting.markdown import render_markdown_report
@@ -34,6 +34,14 @@ def run_demo(args: argparse.Namespace) -> dict[str, Any]:
     task = normalize_task(task)
     profile = analyze_task(task)
     routed, scores = route_experts(task=task, profile=profile, top_k=args.top_k)
+    routed_view = [
+        RoutedExpert(
+            key=expert.key,
+            name=expert.name,
+            score=score,
+        )
+        for expert, score in routed
+    ]
     context = {"profile": profile, "scores": scores}
     provider = build_provider(args)
 
@@ -57,8 +65,23 @@ def run_demo(args: argparse.Namespace) -> dict[str, Any]:
     if getattr(args, "baseline", False):
         baseline = provider.baseline(task=task, context=context)
 
-    console_report = render_console_report(task, routed, proposals, critique, aggregate, baseline=baseline)
-    markdown_report = render_markdown_report(task, provider.mode, routed, proposals, critique, aggregate, baseline=baseline)
+    console_report = render_console_report(
+        task,
+        routed_view,
+        proposals,
+        critique,
+        aggregate,
+        baseline=baseline,
+    )
+    markdown_report = render_markdown_report(
+        task,
+        provider.mode,
+        routed_view,
+        proposals,
+        critique,
+        aggregate,
+        baseline=baseline,
+    )
 
     meta = _build_trace_meta()
     trace: dict[str, Any] = {
@@ -67,7 +90,15 @@ def run_demo(args: argparse.Namespace) -> dict[str, Any]:
         "task": task,
         "provider": provider.mode,
         "profile": profile,
-        "routed": [{"key": expert.key, "name": expert.name, "score": score} for expert, score in routed],
+        "routed": [
+            {
+                "key": expert.key,
+                "name": expert.name,
+                "role": expert.role,
+                "score": score,
+            }
+            for expert, score in routed
+        ],
         "proposals": [asdict(proposal) for proposal in proposals],
         "critique": critique,
         "aggregate": aggregate,

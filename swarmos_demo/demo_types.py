@@ -1,4 +1,20 @@
 """Backward-compatible re-export. Canonical location: core.types"""
-from core.types import ExpertProfile, ExpertProposal
+from core.types import (
+    AggregateResult,
+    BaselineResult,
+    CritiqueReport,
+    ExpertProfile,
+    ExpertProposal,
+    RoutedExpert,
+    TaskProfile,
+)
 
-__all__ = ["ExpertProfile", "ExpertProposal"]
+__all__ = [
+    "AggregateResult",
+    "BaselineResult",
+    "CritiqueReport",
+    "ExpertProfile",
+    "ExpertProposal",
+    "RoutedExpert",
+    "TaskProfile",
+]

@@ -2,16 +2,16 @@ from __future__ import annotations
 
 from typing import Any
 
-from core.types import ExpertProfile, ExpertProposal
+from core.types import AggregateResult, CritiqueReport, ExpertProfile, ExpertProposal
 
 
 def build_mock_aggregate(
     task: str,
     routed: list[tuple[ExpertProfile, float]],
     proposals: list[ExpertProposal],
-    critique: dict[str, Any],
+    critique: CritiqueReport,
     context: dict[str, Any],
-) -> dict[str, Any]:
+) -> AggregateResult:
     del routed
 
     profile = context["profile"]
@@ -62,11 +62,11 @@ def build_mock_aggregate(
     if "路演" in task or "投资" in task:
         final_summary += " 如果用于对外展示，要补一层更商业化的语言包装。"
 
-    return {
-        "selected_experts": selected_names,
-        "consensus": consensus,
-        "critique_focus": critique["focus"],
-        "next_steps": next_steps,
-        "key_risks": key_risks,
-        "final_summary": final_summary,
-    }
+    return AggregateResult(
+        selected_experts=selected_names,
+        consensus=consensus,
+        critique_focus=list(critique["focus"]),
+        next_steps=next_steps,
+        key_risks=key_risks,
+        final_summary=final_summary,
+    )

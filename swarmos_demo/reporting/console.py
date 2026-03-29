@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from typing import Any
 
-from core.types import ExpertProfile, ExpertProposal
+from core.types import AggregateResult, BaselineResult, CritiqueReport, ExpertProposal, RoutedExpert
 
 
 def bullet_block(title: str, items: list[str]) -> str:
@@ -49,12 +49,12 @@ def _render_baseline_comparison(
 
 def render_console_report(
     task: str,
-    routed: list[tuple[ExpertProfile, float]],
+    routed: list[RoutedExpert],
     proposals: list[ExpertProposal],
-    critique: dict[str, Any],
-    aggregate: dict[str, Any],
+    critique: CritiqueReport,
+    aggregate: AggregateResult,
     *,
-    baseline: dict[str, Any] | None = None,
+    baseline: BaselineResult | None = None,
 ) -> str:
     lines: list[str] = []
     lines.append("=" * 72)
@@ -63,8 +63,8 @@ def render_console_report(
     lines.append(f"Task: {task}")
     lines.append("")
     lines.append("Routed experts:")
-    for expert, score in routed:
-        lines.append(f"- {expert.name} ({expert.key}) score={score:.3f}")
+    for expert in routed:
+        lines.append(f"- {expert.name} ({expert.key}) score={expert.score:.3f}")
     lines.append("")
     lines.append("Expert proposals:")
     for proposal in proposals:
@@ -78,14 +78,14 @@ def render_console_report(
                 lines.append(f"  - {item}")
         lines.append("")
     lines.append("Critic focus:")
-    for item in critique.get("focus", []):
+    for item in critique["focus"]:
         lines.append(f"- {item}")
-    if critique.get("duplicates"):
+    if critique["duplicates"]:
         lines.append("")
         lines.append("Critic duplicates:")
         for item in critique["duplicates"]:
             lines.append(f"- {item}")
-    if critique.get("next_checks"):
+    if critique["next_checks"]:
         lines.append("")
         lines.append("Critic next checks:")
         for item in critique["next_checks"]:
@@ -102,5 +102,4 @@ def render_console_report(
 
     if baseline is not None:
         lines.extend(_render_baseline_comparison(baseline, proposals))
-
     return "\n".join(lines)

@@ -13,11 +13,47 @@ What it demonstrates:
 
 ## Quick start
 
-Run the offline demo (default mock provider, no network needed):
+From the `swarmos_demo/` directory, run the offline demo (default mock provider, no network needed):
 
 ```bash
 python3 cli.py --task "为一个由大量0.5B小模型组成的系统设计一个低成本demo，并给出下一步实验计划"
 ```
+
+From the repo root, you can also use the package entrypoint:
+
+```bash
+python3 -m swarmos_demo.cli \
+  --task-file swarmos_demo/examples/task_01.txt \
+  --save-markdown swarmos_demo/outputs/task_01.md \
+  --save-json swarmos_demo/outputs/task_01.json
+```
+
+Run the web demo from the repo root:
+
+```bash
+python3 -m swarmos_demo.web --host 127.0.0.1 --port 8000
+```
+
+Or from the `swarmos_demo/` directory:
+
+```bash
+python3 web.py --host 127.0.0.1 --port 8000
+```
+
+Then open:
+
+```text
+http://127.0.0.1:8000
+```
+
+The web demo includes:
+- a single-model baseline comparison block
+- persisted run history under `swarmos_demo/outputs/web_history/`
+- clickable trace playback from the browser UI
+
+Important:
+- `python3 -m swarmos_demo.web` must be run from the repo root
+- if you are already inside `swarmos_demo/`, use `python3 web.py`
 
 Run with a task file:
 
@@ -159,3 +195,17 @@ python3 cli.py --task "请为这个群智引擎项目设计一个 2 周内可做
 python3 cli.py --task "请设计一个多专家协作的代码审查系统，并指出成本控制方法" --baseline
 python3 cli.py --task "请评估把法律、医疗、代码专家接入同一系统的主要风险" --baseline
 ```
+
+## Current structure
+
+- `swarmos_demo/swarmos_demo.py`: backward-compatible wrapper entrypoint
+- `swarmos_demo/cli.py`: CLI entrypoint
+- `swarmos_demo/web.py`: local zero-dependency web demo server
+- `swarmos_demo/web_history.py`: local run-history persistence and replay metadata
+- `swarmos_demo/core/`: task parsing, routing, workflow orchestration, serialization, storage
+- `swarmos_demo/providers/`: mock, openai-compatible, ollama
+- `swarmos_demo/experts/`: registry, proposal strategies, critic, aggregator
+- `swarmos_demo/reporting/`: console and markdown renderers
+- `swarmos_demo/web_static/`: single-page UI assets
+- `swarmos_demo/examples/`: sample task files
+- `swarmos_demo/docs/`: technical docs, task split, integration contract

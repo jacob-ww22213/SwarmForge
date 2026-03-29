@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from typing import Any
 
-from core.types import ExpertProfile, ExpertProposal
+from core.types import CritiqueReport, ExpertProfile, ExpertProposal
 
 
 def build_mock_critique(
@@ -10,7 +10,7 @@ def build_mock_critique(
     routed: list[tuple[ExpertProfile, float]],
     proposals: list[ExpertProposal],
     context: dict[str, Any],
-) -> dict[str, Any]:
+) -> CritiqueReport:
     del task
     del routed
 
@@ -56,8 +56,8 @@ def build_mock_critique(
     if profile["risk_level"] == "high":
         next_checks.append("高风险样例必须验证输出中是否带有明确的人工复核提醒。")
 
-    return {
-        "focus": focus,
-        "duplicates": duplicates,
-        "next_checks": next_checks,
-    }
+    return CritiqueReport(
+        focus=focus,
+        duplicates=duplicates,
+        next_checks=next_checks,
+    )

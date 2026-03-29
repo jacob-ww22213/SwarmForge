@@ -4,15 +4,15 @@
 - Task: 请为“群智引擎 SwarmOS”设计一个最小可行 demo。 要求： 1. 两周内可以做出来 2. 默认离线可跑 3. 能展示路由、专家协作、批判、聚合四个环节 4. 给出主要风险和下一步实验指标
 
 ## Routed Experts
-- `planner` / Planner: score=0.630
-- `research_scientist` / Research Scientist: score=0.710
-- `coding_engineer` / Coding Engineer: score=0.590
-- `product_strategist` / Product Strategist: score=0.450
+- `planner` / Planner: score=0.680
+- `research_scientist` / Research Scientist: score=0.760
+- `coding_engineer` / Coding Engineer: score=0.640
+- `product_strategist` / Product Strategist: score=0.500
 
 ## Expert Proposals
 ### Planner
 - Role: Turns the task into a concrete execution plan.
-- Confidence: 0.86
+- Confidence: 0.89
 - Summary: 这个任务适合先做一个最小闭环：输入任务，路由到少量专家，生成多份提案，加入批判环节，再聚合输出。
 
 Recommendations:
@@ -23,10 +23,9 @@ Recommendations:
 
 Risks:
 - 如果 demo 目标太大，容易变成空泛展示而不是可运行原型。
-
 ### Research Scientist
 - Role: Focuses on baselines, experiments, evaluation, and ablations.
-- Confidence: 0.91
+- Confidence: 0.92
 - Summary: 如果想判断 demo 有没有价值，必须同时保存基线、路由结果、协作收益和失败模式。 这个任务里，评测设计会直接决定 demo 的说服力。
 
 Recommendations:
@@ -39,10 +38,9 @@ Risks:
 - 没有强基线会导致 demo 看起来聪明但无法证明收益。
 - 只展示成功案例会掩盖失败边界。
 - 没有失败样例时，很容易高估协作机制的真实收益。
-
 ### Coding Engineer
 - Role: Focuses on implementation detail, interfaces, and MVP scope.
-- Confidence: 0.84
+- Confidence: 0.87
 - Summary: 最小工程实现应尽量少依赖，优先做一个单命令可运行的 CLI，并把 trace 和结果保存下来。
 
 Recommendations:
@@ -53,10 +51,9 @@ Recommendations:
 Risks:
 - 引入过多依赖会拖慢第一次跑通。
 - 如果 CLI 输出不清晰，用户看不出协作带来的价值。
-
 ### Product Strategist
 - Role: Focuses on user value, workflow fit, and commercial framing.
-- Confidence: 0.78
+- Confidence: 0.80
 - Summary: demo 不需要证明终极智能，只需要让人一眼看懂系统为什么比单模型流程更可控、更可解释。 当前目标应是让用户在 30 秒内看懂系统流程。
 
 Recommendations:
@@ -100,7 +97,7 @@ Risks:
 |--------|----------|--------------|
 | Recommendations | 2 | 15 |
 | Risks identified | 2 | 8 |
-| Confidence | 0.60 | 0.85 (avg) |
+| Confidence | 0.60 | 0.87 (avg) |
 | Perspectives | 1 (generalist) | 4 (specialists) |
 
 ## Final Output
