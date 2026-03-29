@@ -79,7 +79,7 @@ This project now uses a lightweight pre-1.0 SemVer-style versioning scheme:
 - `PATCH`: bug fixes, doc fixes, and small UX improvements
 
 Current version:
-- `0.5.0`
+- `0.5.1`
 
 See [`CHANGELOG.md`](./CHANGELOG.md) for release history.
 
@@ -97,6 +97,12 @@ Typical flow:
 ./scripts/start-local-demo.sh mock
 ./scripts/health-check.sh
 ./scripts/stop-local-demo.sh
+```
+
+For a single-server deployment where the dashboard should be reachable from outside the machine:
+
+```bash
+CONTROLLER_BIND_HOST=0.0.0.0 CONTROLLER_PUBLIC_HOST=127.0.0.1 ./scripts/start-local-demo.sh mock
 ```
 
 ## Distributed Run Flow

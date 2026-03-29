@@ -1,4 +1,4 @@
-#!/bin/zsh
+#!/usr/bin/env bash
 set -euo pipefail
 
 pkill -f "python3 -m swarmos_demo.controller --host 127.0.0.1 --port 8010" || true

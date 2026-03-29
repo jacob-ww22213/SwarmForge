@@ -7,7 +7,20 @@ This project follows a lightweight SemVer-style versioning scheme while the prod
 - `PATCH`: bug fixes, documentation fixes, test-only changes, or small UX improvements
 
 Current version:
-- `0.5.0`
+- `0.5.1`
+
+## [0.5.1] - 2026-03-29
+
+Changed:
+- made local release scripts portable by resolving the repository root dynamically instead of using a machine-specific absolute path
+- made Codex skill helper scripts portable for multi-machine and server use
+- switched release and helper scripts from zsh-specific entrypoints to portable bash entrypoints for Linux deployment
+- hardened trace loading to ignore AppleDouble metadata files copied from macOS archives
+
+Verified:
+- automated tests passing locally
+- local health-check flow passing against running controller and worker services
+- remote deployment, remote test suite, and public controller health check passing on Ubuntu
 
 ## [0.5.0] - 2026-03-29
 

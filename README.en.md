@@ -82,7 +82,7 @@ Versioning follows a lightweight pre-1.0 SemVer-style scheme:
 - `PATCH`: fixes, documentation changes, and small UX improvements
 
 Current version:
-- `0.5.0`
+- `0.5.1`
 
 ## One-Click Start and Health Check
 
@@ -98,6 +98,12 @@ Recommended pre-release flow:
 ./scripts/start-local-demo.sh mock
 ./scripts/health-check.sh
 ./scripts/stop-local-demo.sh
+```
+
+For a single-server deployment that should expose the dashboard publicly while keeping worker callbacks local to the server:
+
+```bash
+CONTROLLER_BIND_HOST=0.0.0.0 CONTROLLER_PUBLIC_HOST=127.0.0.1 ./scripts/start-local-demo.sh mock
 ```
 
 Notes:

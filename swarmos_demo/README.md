@@ -5,7 +5,7 @@ A runnable MVP for two related directions:
 - a stage-3 distributed controller + worker small-model network
 
 Version:
-- `0.5.0`
+- `0.5.1`
 - see `/VERSION` and `/CHANGELOG.md`
 
 What it demonstrates:
@@ -125,6 +125,12 @@ Open the distributed dashboard:
 
 ```text
 http://CONTROLLER_IP:8010
+```
+
+For a one-machine server deployment, you can also use the bundled script from the repo root:
+
+```bash
+CONTROLLER_BIND_HOST=0.0.0.0 CONTROLLER_PUBLIC_HOST=127.0.0.1 ./scripts/start-local-demo.sh mock
 ```
 
 The distributed UI lets you:

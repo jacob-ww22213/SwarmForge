@@ -1,7 +1,7 @@
-#!/bin/zsh
+#!/usr/bin/env bash
 set -euo pipefail
 
-ROOT="/Users/jacob/Documents/cursor/0.5b 模型的畅想"
+ROOT="$(cd -- "$(dirname -- "$0")/.." && pwd)"
 CONTROLLER_URL="${CONTROLLER_URL:-http://127.0.0.1:8010}"
 cd "$ROOT"
 

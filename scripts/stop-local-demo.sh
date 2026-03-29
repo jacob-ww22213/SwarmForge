@@ -1,7 +1,7 @@
-#!/bin/zsh
+#!/usr/bin/env bash
 set -euo pipefail
 
-ROOT="/Users/jacob/Documents/cursor/0.5b 模型的畅想"
+ROOT="$(cd -- "$(dirname -- "$0")/.." && pwd)"
 RUN_DIR="$ROOT/.swarmforge-run"
 
 stop_pid_file() {

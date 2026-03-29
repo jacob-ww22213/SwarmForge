@@ -1,7 +1,7 @@
-#!/bin/zsh
+#!/usr/bin/env bash
 set -euo pipefail
 
-ROOT="/Users/jacob/Documents/cursor/0.5b 模型的畅想"
+ROOT="$(cd -- "$(dirname -- "$0")/../../../.." && pwd)"
 ROLE="${1:-coding}"
 
 case "$ROLE" in

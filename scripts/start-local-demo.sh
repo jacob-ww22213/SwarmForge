@@ -1,13 +1,14 @@
-#!/bin/zsh
+#!/usr/bin/env bash
 set -euo pipefail
 
-ROOT="/Users/jacob/Documents/cursor/0.5b 模型的畅想"
+ROOT="$(cd -- "$(dirname -- "$0")/.." && pwd)"
 RUN_DIR="$ROOT/.swarmforge-run"
 LOG_DIR="$RUN_DIR/logs"
 mkdir -p "$LOG_DIR"
 
 MODE="${1:-mock}"
-CONTROLLER_HOST="${CONTROLLER_HOST:-127.0.0.1}"
+CONTROLLER_BIND_HOST="${CONTROLLER_BIND_HOST:-127.0.0.1}"
+CONTROLLER_PUBLIC_HOST="${CONTROLLER_PUBLIC_HOST:-127.0.0.1}"
 CONTROLLER_PORT="${CONTROLLER_PORT:-8010}"
 WORKER_A_PORT="${WORKER_A_PORT:-8021}"
 WORKER_B_PORT="${WORKER_B_PORT:-8022}"
@@ -30,7 +31,7 @@ start_if_missing() {
       return 0
     fi
   fi
-  nohup "$@" >"$log_file" 2>&1 </dev/null &!
+  nohup "$@" >"$log_file" 2>&1 </dev/null &
   local pid=$!
   echo "$pid" > "$pid_file"
   echo "started: pid=$pid command=$*"
@@ -39,7 +40,7 @@ start_if_missing() {
 start_if_missing \
   "$RUN_DIR/controller.pid" \
   "$LOG_DIR/controller.log" \
-  python3 -m swarmos_demo.controller --host "$CONTROLLER_HOST" --port "$CONTROLLER_PORT"
+  python3 -m swarmos_demo.controller --host "$CONTROLLER_BIND_HOST" --port "$CONTROLLER_PORT"
 
 if [[ "$MODE" == "mock" ]]; then
   start_if_missing \
@@ -49,7 +50,7 @@ if [[ "$MODE" == "mock" ]]; then
       --host 127.0.0.1 \
       --port "$WORKER_A_PORT" \
       --public-url "http://127.0.0.1:${WORKER_A_PORT}" \
-      --controller-url "http://${CONTROLLER_HOST}:${CONTROLLER_PORT}" \
+      --controller-url "http://${CONTROLLER_PUBLIC_HOST}:${CONTROLLER_PORT}" \
       --provider mock \
       --worker-id worker-a \
       --name Worker-A \
@@ -63,7 +64,7 @@ if [[ "$MODE" == "mock" ]]; then
       --host 127.0.0.1 \
       --port "$WORKER_B_PORT" \
       --public-url "http://127.0.0.1:${WORKER_B_PORT}" \
-      --controller-url "http://${CONTROLLER_HOST}:${CONTROLLER_PORT}" \
+      --controller-url "http://${CONTROLLER_PUBLIC_HOST}:${CONTROLLER_PORT}" \
       --provider mock \
       --worker-id worker-b \
       --name Worker-B \
@@ -77,7 +78,7 @@ elif [[ "$MODE" == "ollama" ]]; then
       --host 127.0.0.1 \
       --port "$WORKER_A_PORT" \
       --public-url "http://127.0.0.1:${WORKER_A_PORT}" \
-      --controller-url "http://${CONTROLLER_HOST}:${CONTROLLER_PORT}" \
+      --controller-url "http://${CONTROLLER_PUBLIC_HOST}:${CONTROLLER_PORT}" \
       --provider ollama \
       --base-url "$OLLAMA_BASE_URL" \
       --model "$MODEL_A" \
@@ -93,7 +94,7 @@ elif [[ "$MODE" == "ollama" ]]; then
       --host 127.0.0.1 \
       --port "$WORKER_B_PORT" \
       --public-url "http://127.0.0.1:${WORKER_B_PORT}" \
-      --controller-url "http://${CONTROLLER_HOST}:${CONTROLLER_PORT}" \
+      --controller-url "http://${CONTROLLER_PUBLIC_HOST}:${CONTROLLER_PORT}" \
       --provider ollama \
       --base-url "$OLLAMA_BASE_URL" \
       --model "$MODEL_B" \
@@ -109,7 +110,8 @@ fi
 
 echo
 echo "local demo start requested"
-echo "controller: http://${CONTROLLER_HOST}:${CONTROLLER_PORT}"
+echo "controller bind: http://${CONTROLLER_BIND_HOST}:${CONTROLLER_PORT}"
+echo "controller public: http://${CONTROLLER_PUBLIC_HOST}:${CONTROLLER_PORT}"
 echo "mode: $MODE"
 echo "logs: $LOG_DIR"
 echo "next step: ./scripts/health-check.sh"

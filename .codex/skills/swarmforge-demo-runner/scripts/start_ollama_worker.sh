@@ -1,4 +1,4 @@
-#!/bin/zsh
+#!/usr/bin/env bash
 set -euo pipefail
 
 if [ "$#" -lt 6 ]; then
@@ -6,7 +6,7 @@ if [ "$#" -lt 6 ]; then
   exit 1
 fi
 
-ROOT="/Users/jacob/Documents/cursor/0.5b 模型的畅想"
+ROOT="$(cd -- "$(dirname -- "$0")/../../../.." && pwd)"
 WORKER_ID="$1"
 NAME="$2"
 ROLE_KEY="$3"

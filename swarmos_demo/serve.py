@@ -166,6 +166,10 @@ def _list_traces() -> list[dict[str, Any]]:
     """List saved JSON traces from outputs/."""
     traces = []
     for p in sorted(OUTPUTS_DIR.glob("*.json"), key=lambda x: x.stat().st_mtime, reverse=True):
+        # Skip AppleDouble metadata files that may appear after copying archives
+        # from macOS onto Linux hosts.
+        if p.name.startswith("._"):
+            continue
         try:
             data = json.loads(p.read_text(encoding="utf-8"))
             traces.append({
@@ -177,7 +181,7 @@ def _list_traces() -> list[dict[str, Any]]:
                 "expert_count": len(data.get("proposals", [])),
                 "has_baseline": "baseline" in data,
             })
-        except (json.JSONDecodeError, OSError):
+        except (json.JSONDecodeError, UnicodeDecodeError, OSError):
             continue
     return traces
 
@@ -189,11 +193,11 @@ def _get_trace(filename: str) -> dict[str, Any] | None:
     path = (OUTPUTS_DIR / safe_name).resolve()
     if not path.is_relative_to(OUTPUTS_DIR.resolve()):
         return None
-    if not path.exists() or path.suffix != ".json":
+    if not path.exists() or path.suffix != ".json" or path.name.startswith("._"):
         return None
     try:
         return json.loads(path.read_text(encoding="utf-8"))
-    except (json.JSONDecodeError, OSError):
+    except (json.JSONDecodeError, UnicodeDecodeError, OSError):
         return None
 
 

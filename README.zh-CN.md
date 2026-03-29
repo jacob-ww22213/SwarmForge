@@ -81,7 +81,7 @@ python3 -m venv .venv
 - `PATCH`：修复、文档更新、小型体验改进
 
 当前版本：
-- `0.5.0`
+- `0.5.1`
 
 ## 一键启动与健康检查
 
@@ -97,6 +97,12 @@ python3 -m venv .venv
 ./scripts/start-local-demo.sh mock
 ./scripts/health-check.sh
 ./scripts/stop-local-demo.sh
+```
+
+如果是单机服务器部署，并且希望外部浏览器能直接访问控制台，可以这样启动：
+
+```bash
+CONTROLLER_BIND_HOST=0.0.0.0 CONTROLLER_PUBLIC_HOST=127.0.0.1 ./scripts/start-local-demo.sh mock
 ```
 
 说明：
