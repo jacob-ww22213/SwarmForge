@@ -170,6 +170,42 @@
         font-size: 12px;
         color: var(--muted);
       }
+      .wizard-grid {
+        display: grid;
+        gap: 12px;
+        margin-top: 14px;
+      }
+      .wizard-step {
+        border: 1px solid var(--line);
+        border-radius: 18px;
+        padding: 14px;
+        background: rgba(255,255,255,0.76);
+      }
+      .wizard-step strong {
+        display: block;
+        font-size: 14px;
+      }
+      .wizard-step span {
+        display: block;
+        margin-top: 6px;
+        color: var(--muted);
+        font-size: 13px;
+        line-height: 1.5;
+      }
+      .command-list {
+        display: grid;
+        gap: 12px;
+        margin-top: 12px;
+      }
+      .command-card {
+        border: 1px solid var(--line);
+        border-radius: 18px;
+        padding: 14px;
+        background: rgba(255,255,255,0.76);
+      }
+      .command-card h4 {
+        margin: 0 0 8px;
+      }
       .code-block {
         margin-top: 10px;
         padding: 12px;
@@ -303,6 +339,7 @@
                 </div>
                 <p>适合快速接入、轻量推理和低资源演示。</p>
                 <div class="actions">
+                  <button class="secondary" type="button" data-use-model="qwen2.5:0.5b">用于接入向导</button>
                   <button type="button" data-download-model="qwen2.5:0.5b" data-download-url="https://ollama.com/library/qwen2.5:0.5b">官方下载页</button>
                   <button class="secondary" type="button" data-copy-command="ollama pull qwen2.5:0.5b">复制命令</button>
                 </div>
@@ -314,6 +351,7 @@
                 </div>
                 <p>适合轻量总结、重写、基础问答和边缘设备实验。</p>
                 <div class="actions">
+                  <button class="secondary" type="button" data-use-model="llama3.2:1b">用于接入向导</button>
                   <button type="button" data-download-model="llama3.2:1b" data-download-url="https://ollama.com/library/llama3.2:1b">官方下载页</button>
                   <button class="secondary" type="button" data-copy-command="ollama pull llama3.2:1b">复制命令</button>
                 </div>
@@ -325,48 +363,93 @@
                 </div>
                 <p>适合代码审查、生成和修复类测试场景。</p>
                 <div class="actions">
+                  <button class="secondary" type="button" data-use-model="qwen2.5-coder:0.5b">用于接入向导</button>
                   <button type="button" data-download-model="qwen2.5-coder:0.5b" data-download-url="https://ollama.com/library/qwen2.5-coder:0.5b">官方下载页</button>
                   <button class="secondary" type="button" data-copy-command="ollama pull qwen2.5-coder:0.5b">复制命令</button>
                 </div>
               </article>
             </div>
             <div class="field">
-              <label>Skill / 启动文档</label>
-              <div class="code-block">先理解两个地址：
+              <label>接入向导</label>
+              <div class="wizard-grid">
+                <div class="wizard-step">
+                  <strong>步骤 1. 填写接入参数</strong>
+                  <span>先填 controller 地址和这台用户电脑自己的可访问 IP。向导会自动生成 bootstrap 和 skill 命令。</span>
+                  <div class="field-grid-2" style="margin-top:12px;">
+                    <div>
+                      <label for="wizard-controller-host">CONTROLLER_IP</label>
+                      <input id="wizard-controller-host" type="text" placeholder="例如 31.97.191.47">
+                    </div>
+                    <div>
+                      <label for="wizard-node-host">NODE_PUBLIC_IP</label>
+                      <input id="wizard-node-host" type="text" placeholder="填写这台用户电脑的 IP">
+                    </div>
+                    <div>
+                      <label for="wizard-node-port">节点端口</label>
+                      <input id="wizard-node-port" type="number" min="1" value="8021">
+                    </div>
+                    <div>
+                      <label for="wizard-model">当前模型</label>
+                      <input id="wizard-model" type="text" value="qwen2.5:0.5b">
+                    </div>
+                    <div>
+                      <label for="wizard-worker-id">worker_id</label>
+                      <input id="wizard-worker-id" type="text" value="my-node-1">
+                    </div>
+                    <div>
+                      <label for="wizard-worker-name">显示名称</label>
+                      <input id="wizard-worker-name" type="text" value="我的节点">
+                    </div>
+                  </div>
+                </div>
+                <div class="wizard-step">
+                  <strong>步骤 2. 先看地址规则</strong>
+                  <span>这两个地址最容易填错，特别是跨机器接入时。</span>
+                  <div class="code-block">先理解两个地址：
 - CONTROLLER_IP：当前页面所在服务器 IP，例如 31.97.191.47
 - NODE_PUBLIC_IP：这台用户电脑能被 controller 访问到的 IP
 
 不要把远程 controller 写成 127.0.0.1。
 在用户电脑上，127.0.0.1 只代表“这台用户自己的电脑”。</div>
-              <div class="code-block">第一次接入新电脑：先用 bootstrap
-
-1. 先启动本机 Ollama
-   ollama serve
-
-2. 下载模型
-   ollama pull qwen2.5:0.5b
-
-3. 运行 bootstrap
-   CONTROLLER_URL=http://CONTROLLER_IP:8010 \
-   PUBLIC_HOST=NODE_PUBLIC_IP \
-   bash -c "$(curl -fsSL https://raw.githubusercontent.com/jacob-ww22213/SwarmForge/main/scripts/bootstrap-node.sh)"</div>
-              <div class="code-block">仓库已经在本地：再用 repo 内 skill / 脚本
-
-CONTROLLER_URL=http://CONTROLLER_IP:8010 \
-PUBLIC_HOST=NODE_PUBLIC_IP \
-WORKER_BIND_HOST=0.0.0.0 \
-./.codex/skills/swarmforge-demo-runner/scripts/start_ollama_worker.sh \
-  my-node-1 "我的节点" coding_worker "Coding Worker" qwen2.5:0.5b 8021</div>
-              <div class="code-block">接入后检查
-
-1. 保持 `ollama serve` 不退出
-2. 保持 worker 进程不退出
-3. 回到本页面点击“刷新状态”
-4. 在线节点数量应大于 0
-5. 如果仍为 0，优先检查：
-   - CONTROLLER_URL 是否写成了服务器地址
-   - PUBLIC_HOST 是否是 controller 能访问到的当前机器 IP
-   - 本机 8021 端口是否被防火墙拦住</div>
+                </div>
+                <div class="wizard-step">
+                  <strong>步骤 3. 复制命令并执行</strong>
+                  <span>第一次接入新电脑优先用 bootstrap。只有仓库已经在本地，才再用 repo 内 skill / 脚本。</span>
+                  <div class="command-list">
+                    <div class="command-card">
+                      <h4>第一次接入新电脑</h4>
+                      <div class="meta">会自动 clone 仓库、创建 venv、安装依赖并启动 worker。</div>
+                      <div id="bootstrap-command" class="code-block"></div>
+                      <div class="actions">
+                        <button class="secondary" type="button" id="copy-bootstrap-command">复制 bootstrap 命令</button>
+                      </div>
+                    </div>
+                    <div class="command-card">
+                      <h4>仓库已经在本地</h4>
+                      <div class="meta">适合已经 clone 过仓库的电脑，直接启动 repo 内 worker 脚本。</div>
+                      <div id="skill-command" class="code-block"></div>
+                      <div class="actions">
+                        <button class="secondary" type="button" id="copy-skill-command">复制 skill 命令</button>
+                      </div>
+                    </div>
+                    <div class="command-card">
+                      <h4>手动启动命令</h4>
+                      <div class="meta">如果你想直接运行 `python -m swarmos_demo.worker`，可以复制这条。</div>
+                      <div id="manual-command" class="code-block"></div>
+                      <div class="actions">
+                        <button class="secondary" type="button" id="copy-manual-command">复制手动命令</button>
+                      </div>
+                    </div>
+                    <div class="command-card">
+                      <h4>接入后检查</h4>
+                      <div id="checklist-command" class="code-block"></div>
+                      <div class="actions">
+                        <button class="secondary" type="button" id="copy-checklist-command">复制检查命令</button>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
             </div>
           </section>
 
@@ -422,6 +505,76 @@ WORKER_BIND_HOST=0.0.0.0 \
       function nodeLabel(workerId) {
         const index = state.workers.findIndex((worker) => worker.worker_id === workerId);
         return index >= 0 ? `在线节点 ${index + 1}` : "在线节点";
+      }
+
+      function shellQuote(value) {
+        return `'${String(value).replaceAll("'", `'\"'\"'`)}'`;
+      }
+
+      function buildWizardState() {
+        const controllerHost = document.querySelector("#wizard-controller-host").value.trim() || window.location.hostname || "31.97.191.47";
+        const nodeHost = document.querySelector("#wizard-node-host").value.trim() || "NODE_PUBLIC_IP";
+        const nodePort = document.querySelector("#wizard-node-port").value.trim() || "8021";
+        const model = document.querySelector("#wizard-model").value.trim() || "qwen2.5:0.5b";
+        const workerId = document.querySelector("#wizard-worker-id").value.trim() || "my-node-1";
+        const workerName = document.querySelector("#wizard-worker-name").value.trim() || "我的节点";
+        return { controllerHost, nodeHost, nodePort, model, workerId, workerName };
+      }
+
+      function updateWizardCommands() {
+        const { controllerHost, nodeHost, nodePort, model, workerId, workerName } = buildWizardState();
+        const bootstrapCommand = [
+          "ollama serve",
+          `ollama pull ${model}`,
+          `CONTROLLER_URL=http://${controllerHost}:8010 \\`,
+          `PUBLIC_HOST=${nodeHost} \\`,
+          `WORKER_PORT=${nodePort} \\`,
+          `WORKER_ID=${workerId} \\`,
+          `WORKER_NAME=${shellQuote(workerName)} \\`,
+          `MODEL=${model} \\`,
+          'bash -c "$(curl -fsSL https://raw.githubusercontent.com/jacob-ww22213/SwarmForge/main/scripts/bootstrap-node.sh)"',
+        ].join("\n");
+
+        const skillCommand = [
+          `CONTROLLER_URL=http://${controllerHost}:8010 \\`,
+          `PUBLIC_HOST=${nodeHost} \\`,
+          `WORKER_BIND_HOST=0.0.0.0 \\`,
+          `./.codex/skills/swarmforge-demo-runner/scripts/start_ollama_worker.sh \\`,
+          `  ${workerId} ${shellQuote(workerName)} coding_worker ${shellQuote("Coding Worker")} ${model} ${nodePort}`,
+        ].join("\n");
+
+        const manualCommand = [
+          "python3 -m swarmos_demo.worker \\",
+          `  --controller-url http://${controllerHost}:8010 \\`,
+          `  --public-url http://${nodeHost}:${nodePort} \\`,
+          "  --host 0.0.0.0 \\",
+          `  --port ${nodePort} \\`,
+          "  --provider ollama \\",
+          "  --base-url http://127.0.0.1:11434/v1 \\",
+          `  --model ${model} \\`,
+          `  --worker-id ${workerId} \\`,
+          `  --name ${shellQuote(workerName)} \\`,
+          '  --role-key coding_worker \\',
+          '  --role-name "Coding Worker"',
+        ].join("\n");
+
+        const checklistCommand = [
+          "接入后检查：",
+          "1. 保持 `ollama serve` 不退出",
+          "2. 保持 worker 进程不退出",
+          "3. 回到本页面点击“刷新状态”",
+          "4. 在线节点数量应大于 0",
+          "5. 如果仍为 0，优先检查：",
+          `   - CONTROLLER_URL 是否写成了 http://${controllerHost}:8010`,
+          `   - PUBLIC_HOST 是否真的是 ${nodeHost}`,
+          `   - controller 是否能访问 http://${nodeHost}:${nodePort}`,
+          `   - 本机 ${nodePort} 端口是否被防火墙拦住`,
+        ].join("\n");
+
+        document.querySelector("#bootstrap-command").textContent = bootstrapCommand;
+        document.querySelector("#skill-command").textContent = skillCommand;
+        document.querySelector("#manual-command").textContent = manualCommand;
+        document.querySelector("#checklist-command").textContent = checklistCommand;
       }
 
       function renderStats(status) {
@@ -633,9 +786,44 @@ WORKER_BIND_HOST=0.0.0.0 \
         });
       });
 
+      document.querySelectorAll("[data-use-model]").forEach((button) => {
+        button.addEventListener("click", () => {
+          const model = button.dataset.useModel || "";
+          document.querySelector("#wizard-model").value = model;
+          updateWizardCommands();
+          document.querySelector("#run-status").textContent = `已将接入向导模型切换为 ${model}`;
+        });
+      });
+
+      [
+        "#wizard-controller-host",
+        "#wizard-node-host",
+        "#wizard-node-port",
+        "#wizard-model",
+        "#wizard-worker-id",
+        "#wizard-worker-name",
+      ].forEach((selector) => {
+        document.querySelector(selector).addEventListener("input", updateWizardCommands);
+      });
+
+      document.querySelector("#copy-bootstrap-command").addEventListener("click", () => {
+        copyText(document.querySelector("#bootstrap-command").textContent || "", "已复制 bootstrap 命令");
+      });
+      document.querySelector("#copy-skill-command").addEventListener("click", () => {
+        copyText(document.querySelector("#skill-command").textContent || "", "已复制 skill 命令");
+      });
+      document.querySelector("#copy-manual-command").addEventListener("click", () => {
+        copyText(document.querySelector("#manual-command").textContent || "", "已复制手动命令");
+      });
+      document.querySelector("#copy-checklist-command").addEventListener("click", () => {
+        copyText(document.querySelector("#checklist-command").textContent || "", "已复制检查步骤");
+      });
+
       document.querySelector("#run-button").addEventListener("click", runTask);
       document.querySelector("#refresh-button").addEventListener("click", refreshAll);
 
+      document.querySelector("#wizard-controller-host").value = window.location.hostname || "31.97.191.47";
+      updateWizardCommands();
       document.querySelector("#run-status").textContent = "页面已就绪，可以下载模型或直接提交任务";
       refreshAll().catch((error) => {
         document.querySelector("#run-status").textContent = error.message || "初始化失败";

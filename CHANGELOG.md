@@ -7,7 +7,14 @@ This project follows a lightweight SemVer-style versioning scheme while the prod
 - `PATCH`: bug fixes, documentation fixes, test-only changes, or small UX improvements
 
 Current version:
-- `0.6.3`
+- `0.6.4`
+
+## [0.6.4] - 2026-03-30
+
+Changed:
+- turned the distributed node onboarding area into a guided UI with editable controller IP, node IP, port, model, and worker identity fields
+- added generated bootstrap, repo-local skill, manual worker, and post-check commands that can be copied directly from the browser
+- connected recommended model cards to the onboarding wizard so choosing a model updates the generated commands automatically
 
 ## [0.6.3] - 2026-03-30
 
