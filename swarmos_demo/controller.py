@@ -6,10 +6,9 @@ import json
 import logging
 import sys
 import time
-from concurrent.futures import ThreadPoolExecutor, as_completed
 from http.server import ThreadingHTTPServer, SimpleHTTPRequestHandler
 from pathlib import Path
-from threading import Lock
+from threading import Condition, Lock, Thread
 from typing import Any
 from urllib.parse import urlparse
 
@@ -42,11 +41,16 @@ class ControllerState:
     def __init__(self, stale_after_s: int) -> None:
         self.stale_after_s = stale_after_s
         self._lock = Lock()
+        self._condition = Condition(self._lock)
         self.workers: dict[str, dict[str, Any]] = {}
+        self.worker_queues: dict[str, list[dict[str, Any]]] = {}
+        self.task_results: dict[str, dict[str, dict[str, Any]]] = {}
 
     def upsert_worker(self, payload: dict[str, Any]) -> dict[str, Any]:
         worker_id = payload["worker_id"]
         now = time.time()
+        with self._lock:
+            previous = dict(self.workers.get(worker_id, {}))
         record = {
             "worker_id": worker_id,
             "name": payload.get("name") or worker_id,
@@ -61,12 +65,23 @@ class ControllerState:
             "max_tokens": payload.get("max_tokens", 512),
             "status": payload.get("status", "online"),
             "models_available": payload.get("models_available", []),
+            "provider_ready": bool(payload.get("provider_ready", previous.get("provider_ready", True))),
+            "provider_error": payload.get("provider_error", previous.get("provider_error")),
             "last_seen": now,
             "last_seen_iso": utc_now_iso(),
             "last_error": payload.get("last_error"),
+            "last_pull": previous.get("last_pull"),
+            "last_pull_iso": previous.get("last_pull_iso"),
+            "callback_reachable": previous.get("callback_reachable"),
+            "callback_error": previous.get("callback_error"),
+            "callback_checked_at": previous.get("callback_checked_at"),
+            "callback_checked_at_iso": previous.get("callback_checked_at_iso"),
+            "callback_probe_pending": previous.get("callback_probe_pending", False),
+            "callback_checked_url": previous.get("callback_checked_url"),
         }
         with self._lock:
             self.workers[worker_id] = record
+            self.worker_queues.setdefault(worker_id, [])
         return record
 
     def list_workers(self) -> list[dict[str, Any]]:
@@ -75,7 +90,29 @@ class ControllerState:
         with self._lock:
             for worker in self.workers.values():
                 item = dict(worker)
-                item["online"] = (now - worker["last_seen"]) <= self.stale_after_s
+                heartbeat_online = (now - worker["last_seen"]) <= self.stale_after_s
+                last_pull = float(worker.get("last_pull") or 0.0)
+                pull_online = bool(last_pull) and (now - last_pull) <= max(self.stale_after_s * 2, 30)
+                provider_ready = bool(worker.get("provider_ready", True))
+                ready = heartbeat_online and pull_online and provider_ready
+                callback_reachable = worker.get("callback_reachable")
+                item["heartbeat_online"] = heartbeat_online
+                item["pull_online"] = pull_online
+                item["provider_ready"] = provider_ready
+                item["ready"] = ready
+                item["online"] = ready
+                if ready:
+                    item["status_label"] = "ready"
+                elif heartbeat_online:
+                    item["status_label"] = "degraded"
+                else:
+                    item["status_label"] = "offline"
+                if callback_reachable is False:
+                    item["connectivity_label"] = "callback-failed"
+                elif callback_reachable is True:
+                    item["connectivity_label"] = "callback-ok"
+                else:
+                    item["connectivity_label"] = "callback-unknown"
                 items.append(item)
         items.sort(key=lambda item: item["worker_id"])
         return items
@@ -86,7 +123,100 @@ class ControllerState:
             return dict(worker) if worker else None
 
     def online_workers(self) -> list[dict[str, Any]]:
-        return [item for item in self.list_workers() if item["online"] and item.get("public_url")]
+        return [item for item in self.list_workers() if item["ready"]]
+
+    def _mark_worker_pull_locked(self, worker_id: str) -> dict[str, Any] | None:
+        worker = self.workers.get(worker_id)
+        if worker is None:
+            return None
+        worker["last_pull"] = time.time()
+        worker["last_pull_iso"] = utc_now_iso()
+        return dict(worker)
+
+    def mark_worker_pull(self, worker_id: str) -> dict[str, Any] | None:
+        with self._condition:
+            return self._mark_worker_pull_locked(worker_id)
+
+    def should_probe_callback(self, worker_id: str) -> bool:
+        with self._lock:
+            worker = self.workers.get(worker_id)
+            if worker is None or not worker.get("public_url"):
+                return False
+            if worker.get("callback_probe_pending"):
+                return False
+            last_checked = float(worker.get("callback_checked_at") or 0.0)
+            if worker.get("callback_checked_url") != worker.get("public_url"):
+                worker["callback_probe_pending"] = True
+                return True
+            if (time.time() - last_checked) >= 20:
+                worker["callback_probe_pending"] = True
+                return True
+            return False
+
+    def set_callback_probe_result(self, worker_id: str, *, reachable: bool, error: str | None = None) -> None:
+        with self._lock:
+            worker = self.workers.get(worker_id)
+            if worker is None:
+                return
+            worker["callback_reachable"] = reachable
+            worker["callback_error"] = error
+            worker["callback_checked_at"] = time.time()
+            worker["callback_checked_at_iso"] = utc_now_iso()
+            worker["callback_probe_pending"] = False
+            worker["callback_checked_url"] = worker.get("public_url")
+
+    def enqueue_assignments(self, assignments: list[dict[str, Any]]) -> None:
+        with self._condition:
+            for assignment in assignments:
+                worker_id = assignment["worker_id"]
+                self.worker_queues.setdefault(worker_id, []).append(assignment)
+                task_id = assignment["task_id"]
+                self.task_results.setdefault(task_id, {})
+            self._condition.notify_all()
+
+    def next_assignment(self, worker_id: str, wait_timeout_s: float) -> dict[str, Any] | None:
+        deadline = time.monotonic() + max(wait_timeout_s, 0.0)
+        with self._condition:
+            self._mark_worker_pull_locked(worker_id)
+            while True:
+                queue = self.worker_queues.setdefault(worker_id, [])
+                if queue:
+                    assignment = queue.pop(0)
+                    self._mark_worker_pull_locked(worker_id)
+                    return assignment
+                remaining = deadline - time.monotonic()
+                if remaining <= 0:
+                    self._mark_worker_pull_locked(worker_id)
+                    return None
+                self._condition.wait(timeout=remaining)
+
+    def submit_task_result(self, task_id: str, assignment_id: str, result: dict[str, Any]) -> None:
+        with self._condition:
+            bucket = self.task_results.setdefault(task_id, {})
+            bucket[assignment_id] = result
+            self._condition.notify_all()
+
+    def await_task_results(
+        self,
+        task_id: str,
+        assignment_ids: list[str],
+        *,
+        timeout_s: float,
+    ) -> dict[str, dict[str, Any]]:
+        deadline = time.monotonic() + timeout_s
+        with self._condition:
+            bucket = self.task_results.setdefault(task_id, {})
+            while True:
+                if all(assignment_id in bucket for assignment_id in assignment_ids):
+                    return {assignment_id: bucket[assignment_id] for assignment_id in assignment_ids}
+                remaining = deadline - time.monotonic()
+                if remaining <= 0:
+                    return {assignment_id: bucket[assignment_id] for assignment_id in assignment_ids if assignment_id in bucket}
+                self._condition.wait(timeout=remaining)
+
+    def clear_task_tracking(self, task_id: str) -> None:
+        with self._condition:
+            self.task_results.pop(task_id, None)
 
 
 STATE = ControllerState(stale_after_s=20)
@@ -138,42 +268,41 @@ def _rate_task(task_id: str, rating: int, note: str) -> dict[str, Any]:
     return record
 
 
-def _dispatch_to_worker(
-    worker: dict[str, Any],
+def _probe_worker_callback(worker_id: str) -> None:
+    worker = STATE.get_worker(worker_id)
+    if worker is None or not worker.get("public_url"):
+        return
+    try:
+        json_request(
+            f"{worker['public_url'].rstrip('/')}/api/status",
+            timeout=2.0,
+        )
+    except Exception as exc:
+        STATE.set_callback_probe_result(worker_id, reachable=False, error=str(exc))
+        return
+    STATE.set_callback_probe_result(worker_id, reachable=True, error=None)
+
+
+def _build_assignment(
+    record: dict[str, Any],
     task_id: str,
     task: str,
     *,
     mode: str,
     round_index: int,
-    routing_score: float,
     peer_results: list[dict[str, Any]] | None = None,
 ) -> dict[str, Any]:
-    started = time.monotonic()
-    payload = {
+    return {
+        "assignment_id": utc_timestamp_id("assign"),
         "task_id": task_id,
+        "worker_id": record["worker_id"],
+        "worker": record["worker"],
         "task": task,
         "mode": mode,
         "round_index": round_index,
-        "routing_score": routing_score,
+        "routing_score": float(record["score"]),
         "peer_results": peer_results or [],
     }
-    try:
-        response = json_request(
-            f"{worker['public_url'].rstrip('/')}/api/infer",
-            method="POST",
-            payload=payload,
-            timeout=300.0,
-        )
-    except Exception as exc:
-        return {
-            "worker": worker,
-            "status": "error",
-            "error": str(exc),
-            "latency_ms": int((time.monotonic() - started) * 1000),
-        }
-    response["worker"] = worker
-    response.setdefault("latency_ms", int((time.monotonic() - started) * 1000))
-    return response
 
 
 def _run_worker_group(
@@ -187,23 +316,50 @@ def _run_worker_group(
 ) -> list[dict[str, Any]]:
     if not selected_records:
         return []
+    assignments = [
+        _build_assignment(
+            record,
+            task_id,
+            task,
+            mode=mode,
+            round_index=round_index,
+            peer_results=peer_results,
+        )
+        for record in selected_records
+    ]
+    STATE.enqueue_assignments(assignments)
+    assignment_by_id = {assignment["assignment_id"]: assignment for assignment in assignments}
+    round_timeout_s = 180.0
+    collected = STATE.await_task_results(
+        task_id,
+        list(assignment_by_id.keys()),
+        timeout_s=round_timeout_s,
+    )
     results: list[dict[str, Any]] = []
-    with ThreadPoolExecutor(max_workers=len(selected_records)) as pool:
-        futures = [
-            pool.submit(
-                _dispatch_to_worker,
-                record["worker"],
-                task_id,
-                task,
-                mode=mode,
-                round_index=round_index,
-                routing_score=float(record["score"]),
-                peer_results=peer_results,
+    for assignment in assignments:
+        result = collected.get(assignment["assignment_id"])
+        if result is None:
+            results.append(
+                {
+                    "task_id": task_id,
+                    "assignment_id": assignment["assignment_id"],
+                    "worker": assignment["worker"],
+                    "worker_id": assignment["worker_id"],
+                    "status": "error",
+                    "error": f"worker result timeout after {int(round_timeout_s)}s",
+                    "mode": mode,
+                    "round_index": round_index,
+                    "routing_score": round(float(assignment["routing_score"]), 3),
+                    "latency_ms": int(round_timeout_s * 1000),
+                }
             )
-            for record in selected_records
-        ]
-        for future in as_completed(futures):
-            results.append(future.result())
+            continue
+        result.setdefault("worker", assignment["worker"])
+        result.setdefault("worker_id", assignment["worker_id"])
+        result.setdefault("mode", mode)
+        result.setdefault("round_index", round_index)
+        result.setdefault("routing_score", round(float(assignment["routing_score"]), 3))
+        results.append(result)
     results.sort(key=lambda item: ((item.get("round_index") or round_index), item["worker"]["worker_id"]))
     return results
 
@@ -307,6 +463,7 @@ def _run_distributed_task(
         "metrics": metrics,
     }
     _save_task_record(record)
+    STATE.clear_task_tracking(task_id)
     return record
 
 
@@ -352,10 +509,14 @@ class ControllerHandler(SimpleHTTPRequestHandler):
             return self._json_response(
                 {
                     "service": "swarmos-controller",
-                    "online_workers": len([item for item in workers if item["online"]]),
+                    "online_workers": len([item for item in workers if item["ready"]]),
+                    "ready_workers": len([item for item in workers if item["ready"]]),
+                    "heartbeat_online_workers": len([item for item in workers if item["heartbeat_online"]]),
+                    "callback_reachable_workers": len([item for item in workers if item.get("callback_reachable") is True]),
+                    "callback_failed_workers": len([item for item in workers if item.get("callback_reachable") is False]),
                     "known_workers": len(workers),
                     "tasks_saved": len(_list_task_records(limit=1000)),
-                    "dispatch_policy": "moe-top-k + moa-two-round",
+                    "dispatch_policy": "moe-top-k + moa-two-round + worker-pull",
                 }
             )
 
@@ -385,7 +546,22 @@ class ControllerHandler(SimpleHTTPRequestHandler):
 
         if path == "/api/workers/heartbeat":
             worker = STATE.upsert_worker(body)
+            if STATE.should_probe_callback(worker["worker_id"]):
+                Thread(target=_probe_worker_callback, args=(worker["worker_id"],), daemon=True).start()
             return self._json_response({"ok": True, "worker": worker})
+
+        if path.startswith("/api/workers/") and path.endswith("/pull-task"):
+            worker_id = path.split("/")[-2]
+            wait_timeout_s = float(body.get("wait_timeout_s", 20.0))
+            assignment = STATE.next_assignment(worker_id, wait_timeout_s=wait_timeout_s)
+            worker = STATE.get_worker(worker_id)
+            return self._json_response(
+                {
+                    "ok": True,
+                    "worker_ready": bool(worker and STATE.get_worker(worker_id)),
+                    "assignment": assignment,
+                }
+            )
 
         if path == "/api/tasks/run":
             task = str(body.get("task", "")).strip()
@@ -409,6 +585,15 @@ class ControllerHandler(SimpleHTTPRequestHandler):
             except ValueError as exc:
                 return self._json_response({"error": str(exc)}, 400)
             return self._json_response(record)
+
+        if path.startswith("/api/tasks/") and path.endswith("/worker-result"):
+            task_id = path.split("/")[-2]
+            assignment_id = str(body.get("assignment_id", "")).strip()
+            worker_id = str(body.get("worker_id", "")).strip()
+            if not assignment_id or not worker_id:
+                return self._json_response({"error": "assignment_id and worker_id are required"}, 400)
+            STATE.submit_task_result(task_id, assignment_id, body)
+            return self._json_response({"ok": True})
 
         if path.endswith("/rating") and path.startswith("/api/tasks/"):
             task_id = path.split("/")[-2]

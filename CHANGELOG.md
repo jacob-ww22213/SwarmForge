@@ -7,7 +7,15 @@ This project follows a lightweight SemVer-style versioning scheme while the prod
 - `PATCH`: bug fixes, documentation fixes, test-only changes, or small UX improvements
 
 Current version:
-- `0.6.5`
+- `0.7.0`
+
+## [0.7.0] - 2026-03-30
+
+Changed:
+- moved distributed execution from controller callback mode to a worker-pull task queue so NATed nodes can still execute tasks without exposing a reachable public inference port
+- tightened node readiness so a worker is only marked `READY` after heartbeat, task-pull connectivity, and local provider self-check all pass
+- added callback reachability diagnostics against `/api/status`; callback failures are now shown as a red degraded signal instead of being mistaken for execution readiness
+- updated the browser console to block task submission when there are no `READY` nodes and to explain the new readiness signals directly in the worker cards
 
 ## [0.6.5] - 2026-03-30
 

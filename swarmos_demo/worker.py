@@ -50,9 +50,15 @@ class WorkerRuntime:
         self.port = args.port
         self.public_url = args.public_url or guess_public_url(args.host, args.port)
         self.heartbeat_interval = args.heartbeat_interval
+        self.pull_interval = args.pull_interval
+        self.pull_timeout = args.pull_timeout
         self.temperature = args.temperature
         self.max_tokens = args.max_tokens
         self.stop_event = threading.Event()
+        self.provider_ready = False
+        self.provider_error: str | None = None
+        self.models_available: list[str] = []
+        self.last_provider_check = 0.0
 
     def build_provider(self):
         with self._lock:
@@ -63,14 +69,40 @@ class WorkerRuntime:
                 model=self.model,
             )
 
-    def status_payload(self) -> dict[str, Any]:
+    def refresh_provider_health(self, force: bool = False) -> tuple[bool, str | None, list[str]]:
         with self._lock:
+            if not force and (time.monotonic() - self.last_provider_check) <= 10:
+                return self.provider_ready, self.provider_error, list(self.models_available)
+
+            ready = True
+            error: str | None = None
             models_available: list[str] = []
-            if self.provider == "ollama" and self.base_url:
-                try:
+            try:
+                if self.provider == "ollama":
+                    if not self.base_url:
+                        raise RuntimeError("Missing Ollama base URL.")
                     models_available = list_ollama_models(self.base_url)
-                except Exception:
-                    models_available = []
+                    if self.model and self.model not in models_available:
+                        raise RuntimeError(f"Configured model not installed: {self.model}")
+                elif self.provider == "openai-compatible":
+                    if not self.base_url:
+                        raise RuntimeError("Missing provider base URL.")
+                    if not self.model:
+                        raise RuntimeError("Missing model name.")
+                else:
+                    ready = True
+            except Exception as exc:
+                ready = False
+                error = str(exc)
+            self.provider_ready = ready
+            self.provider_error = error
+            self.models_available = models_available
+            self.last_provider_check = time.monotonic()
+            return ready, error, list(models_available)
+
+    def status_payload(self) -> dict[str, Any]:
+        provider_ready, provider_error, models_available = self.refresh_provider_health()
+        with self._lock:
             return {
                 "worker_id": self.worker_id,
                 "name": self.name,
@@ -84,6 +116,8 @@ class WorkerRuntime:
                 "max_tokens": self.max_tokens,
                 "status": "online",
                 "models_available": models_available,
+                "provider_ready": provider_ready,
+                "provider_error": provider_error,
             }
 
     def _build_infer_task(self, task: str, mode: str, peer_results: list[dict[str, Any]]) -> str:
@@ -117,6 +151,41 @@ class WorkerRuntime:
             except Exception as exc:
                 logger.warning("Heartbeat failed: %s", exc)
             self.stop_event.wait(self.heartbeat_interval)
+
+    def submit_result(self, task_id: str, result: dict[str, Any]) -> None:
+        json_request(
+            f"{self.controller_url}/api/tasks/{task_id}/worker-result",
+            method="POST",
+            payload=result,
+            timeout=30.0,
+        )
+
+    def poll_loop(self) -> None:
+        while not self.stop_event.is_set():
+            try:
+                response = json_request(
+                    f"{self.controller_url}/api/workers/{self.worker_id}/pull-task",
+                    method="POST",
+                    payload={"wait_timeout_s": self.pull_timeout},
+                    timeout=self.pull_timeout + 10.0,
+                )
+                assignment = response.get("assignment")
+                if not assignment:
+                    self.stop_event.wait(self.pull_interval)
+                    continue
+                result = self.infer(
+                    str(assignment.get("task_id", "")),
+                    str(assignment.get("task", "")),
+                    mode=str(assignment.get("mode", "proposal")),
+                    round_index=int(assignment.get("round_index", 1)),
+                    peer_results=assignment.get("peer_results", []),
+                    routing_score=float(assignment.get("routing_score", 0.75)),
+                )
+                result["assignment_id"] = assignment.get("assignment_id")
+                self.submit_result(str(assignment.get("task_id", "")), result)
+            except Exception as exc:
+                logger.warning("Task pull failed: %s", exc)
+                self.stop_event.wait(max(self.pull_interval, 1))
 
     def infer(
         self,
@@ -273,6 +342,8 @@ def main() -> int:
     parser.add_argument("--api-key", help="API key for openai-compatible provider.")
     parser.add_argument("--model", default="qwen2.5:7b")
     parser.add_argument("--heartbeat-interval", type=int, default=5)
+    parser.add_argument("--pull-interval", type=int, default=1)
+    parser.add_argument("--pull-timeout", type=int, default=20)
     parser.add_argument("--temperature", type=float, default=0.2)
     parser.add_argument("--max-tokens", type=int, default=512)
     args = parser.parse_args()
@@ -285,6 +356,8 @@ def main() -> int:
 
     heartbeat_thread = threading.Thread(target=RUNTIME.heartbeat_loop, daemon=True)
     heartbeat_thread.start()
+    poll_thread = threading.Thread(target=RUNTIME.poll_loop, daemon=True)
+    poll_thread.start()
 
     server = ThreadingHTTPServer((args.host, args.port), WorkerHandler)
     print(f"SwarmOS worker running at {RUNTIME.public_url}")

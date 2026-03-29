@@ -7,8 +7,10 @@ The repository now includes two complementary modes:
 - a controller + worker distributed MVP where multiple machines register online, receive tasks, run local models, and report results back
 
 The distributed console is now a single unified page:
-- the server-side controller only routes tasks, tracks online nodes, and renders the task history
-- model owners download small models on their own devices, start a local worker, keep heartbeats alive, and then participate in task execution
+- the server-side controller only routes tasks, tracks node readiness, and renders the live execution view
+- model owners download small models on their own devices, start a local worker, keep heartbeats and task-pull loops alive, and then participate in task execution
+- a node is only marked `READY` after heartbeat, worker-pull connectivity, and local provider self-check all pass
+- callback reachability to the worker `public_url` is now a diagnostic signal, not a hard requirement for task execution
 
 Language:
 - [中文说明](./README.zh-CN.md)

@@ -5,11 +5,13 @@ SwarmForge now includes two complementary tracks:
 1. a single-machine routed multi-expert demo
 2. a stage-3 distributed small-model network demo
 
-The distributed mode is the closer match to the target product: a controller tracks online worker nodes, each worker runs a local model, the browser sends a task to the controller, and the controller dispatches that task to all online small-model nodes before aggregating results, latency, and user satisfaction.
+The distributed mode is the closer match to the target product: a controller tracks online worker nodes, each worker runs a local model, the browser sends a task to the controller, and selected workers actively pull their assigned tasks before returning results, latency, and user satisfaction metrics.
 
 The distributed front-end is now a single unified console:
-- the controller server focuses on routing, online-node visibility, and result presentation
-- model owners download small models on their own machines, start a local worker, and keep that node online through heartbeats
+- the controller server focuses on routing, node readiness visibility, and result presentation
+- model owners download small models on their own machines, start a local worker, and keep that node online through heartbeats and task-pull loops
+- a node is only marked `READY` after heartbeat, task-pull connectivity, and local provider self-check all pass
+- callback reachability to the worker `public_url` is now a diagnostic signal rather than a requirement for execution
 
 ## What This Project Demonstrates
 
@@ -21,7 +23,7 @@ The distributed front-end is now a single unified console:
 - cost estimation, conflict detection, TF-IDF routing, reputation, learned scores
 - web UI demo and multi-round collaboration
 - controller + worker multi-machine orchestration
-- worker heartbeats and online node tracking
+- worker heartbeats, pull-based execution, and readiness tracking
 - recommended-model cards, local Ollama download guidance, and node onboarding instructions
 - distributed task history, latency metrics, and user ratings
 

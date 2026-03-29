@@ -144,6 +144,8 @@
       }
       .chip.online { background: rgba(40,115,77,0.12); color: var(--good); }
       .chip.offline { background: rgba(177,70,59,0.12); color: var(--bad); }
+      .chip.degraded { background: rgba(173,116,26,0.14); color: #8a5b12; }
+      .chip.alert { background: rgba(177,70,59,0.12); color: var(--bad); }
       .chip.role-project { background: rgba(58,95,145,0.12); color: var(--role); }
       .chip.role-user { background: rgba(163,76,29,0.12); color: var(--accent); }
       .inline { display: grid; grid-template-columns: 1fr auto auto; gap: 8px; margin-top: 10px; }
@@ -457,7 +459,7 @@
         <div class="right">
           <section class="panel">
             <h2>在线节点状态</h2>
-            <p>这里只展示当前已经接入 controller 的在线节点状态，不再暴露内部实现名，也不在这里做模型下载操作。</p>
+            <p>这里只展示当前接入 controller 的节点状态。节点只有在 heartbeat、task pull 和本地模型自检都通过后才会显示为 READY；`CALLBACK FAIL` 只代表公网反向访问失败，用于诊断，不会阻止 pull 模式执行。</p>
             <div id="stats" class="stats" style="margin-top:14px;"></div>
             <div id="worker-list" class="worker-list" style="margin-top:14px;"></div>
           </section>
@@ -558,11 +560,12 @@
           "1. 保持 `ollama serve` 不退出",
           "2. 保持 worker 进程不退出",
           "3. 回到本页面点击“刷新状态”",
-          "4. 在线节点数量应大于 0",
+          "4. 节点应显示为 READY，而不是只出现 heartbeat",
           "5. 如果仍为 0，优先检查：",
           `   - CONTROLLER_URL 是否写成了 http://${controllerHost}:8010`,
           `   - PUBLIC_HOST 是否真的是 ${nodeHost}`,
-          `   - controller 是否能访问 http://${nodeHost}:${nodePort}`,
+          `   - 节点是否已开始 pull controller 任务队列`,
+          `   - controller 是否能访问 http://${nodeHost}:${nodePort}（仅用于回调诊断，可失败但会标红）`,
           `   - 本机 ${nodePort} 端口是否被防火墙拦住`,
         ].join("\n");
 
@@ -574,10 +577,10 @@
 
       function renderStats(status) {
         const cards = [
-          { label: "在线节点", value: status.online_workers || 0 },
+          { label: "就绪节点", value: status.ready_workers || status.online_workers || 0 },
+          { label: "心跳在线", value: status.heartbeat_online_workers || 0 },
           { label: "已知节点", value: status.known_workers || 0 },
-          { label: "接入模式", value: "用户自持节点" },
-          { label: "调度策略", value: status.dispatch_policy || "moe-top-k + moa-two-round" },
+          { label: "回调失败", value: status.callback_failed_workers || 0 },
         ];
         document.querySelector("#stats").innerHTML = cards.map((card) => `
           <div class="stat">
@@ -600,13 +603,22 @@
                 <h4>${escapeHtml(nodeLabel(worker.worker_id))}</h4>
                 <div class="meta">${escapeHtml(worker.provider || "-")} · ${escapeHtml(worker.model || "-")}</div>
                 <div class="meta">上次心跳：${escapeHtml(formatTime(worker.last_seen_iso))}</div>
+                <div class="meta">最近拉取：${escapeHtml(formatTime(worker.last_pull_iso || "-"))}</div>
                 <div class="meta">地址：${escapeHtml(worker.public_url || "-")}</div>
+                <div class="meta">本地模型自检：${worker.provider_ready ? "通过" : escapeHtml(worker.provider_error || "未通过")}</div>
               </div>
-              <span class="chip ${worker.online ? "online" : "offline"}">${worker.online ? "ONLINE" : "OFFLINE"}</span>
+              <div style="display:grid;gap:8px;justify-items:end;">
+                <span class="chip ${worker.ready ? "online" : (worker.heartbeat_online ? "degraded" : "offline")}">${worker.ready ? "READY" : (worker.heartbeat_online ? "DEGRADED" : "OFFLINE")}</span>
+                ${worker.callback_reachable === false ? `<span class="chip alert">CALLBACK FAIL</span>` : ""}
+              </div>
             </div>
             <div class="meta" style="margin-top:10px;">
               已安装模型：${escapeHtml((worker.models_available || []).join(", ") || worker.model || "-")}
             </div>
+            <div class="meta" style="margin-top:8px;">
+              判定逻辑：heartbeat=${worker.heartbeat_online ? "ok" : "fail"} · pull=${worker.pull_online ? "ok" : "fail"} · provider=${worker.provider_ready ? "ok" : "fail"} · callback=${worker.callback_reachable === true ? "ok" : (worker.callback_reachable === false ? "fail" : "unknown")}
+            </div>
+            ${worker.callback_error ? `<div class="meta" style="margin-top:8px;color:#b1463b;">回调检测失败：${escapeHtml(worker.callback_error)}</div>` : ""}
           </article>
         `).join("");
       }
@@ -691,7 +703,12 @@
         const topK = Number(document.querySelector("#proposal-top-k").value || 3);
         const reviewTopK = Number(document.querySelector("#review-top-k").value || 2);
         if (!task) return;
-        document.querySelector("#run-status").textContent = `任务正在执行 MoE 路由和两轮协作...`;
+        const readyWorkers = state.workers.filter((worker) => worker.ready);
+        if (!readyWorkers.length) {
+          document.querySelector("#run-status").textContent = "当前没有 READY 节点。节点必须同时通过 heartbeat、pull 和本地模型自检后才会参与任务。";
+          return;
+        }
+        document.querySelector("#run-status").textContent = `任务正在执行 MoE 路由和两轮协作（worker 主动拉取任务）...`;
         try {
           const payload = await fetchJson("/api/tasks/run", {
             method: "POST",

@@ -6,11 +6,13 @@ SwarmForge 现在包含两条能力线：
 2. 阶段 3：多机小模型网络 Demo
 
 单机模式用于展示 route -> propose -> critique -> aggregate 的协作链路。  
-多机模式用于展示你真正想要的形态：controller 管理在线节点，worker 在各自机器上运行本地模型，用户在页面输入任务后，系统把任务分发给所有在线小模型，再汇总结果、耗时和满意度。
+多机模式用于展示你真正想要的形态：controller 管理在线节点，worker 在各自机器上运行本地模型，用户在页面输入任务后，系统按 MoE 选节点，再由 worker 主动拉取任务并回传结果，最后汇总结果、耗时和满意度。
 
 当前分布式前端已经改成统一控制台：
 - controller 服务器只负责路由、展示状态和保存任务历史
-- 测试用户在自己的设备上下载小模型、启动本地 worker，并保持 heartbeat 在线
+- 测试用户在自己的设备上下载小模型、启动本地 worker，并保持 heartbeat 与 task-pull 在线
+- 节点只有在 heartbeat、task-pull、自检三项都通过后才会显示为 `READY`
+- controller 对 `public_url` 的回调检测只作为诊断信息，不再决定节点能否执行任务
 
 ## 项目能做什么
 

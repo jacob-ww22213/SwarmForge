@@ -5,7 +5,7 @@ A runnable MVP for two related directions:
 - a stage-3 distributed controller + worker small-model network
 
 Version:
-- `0.6.2`
+- `0.7.0`
 - see `/VERSION` and `/CHANGELOG.md`
 
 What it demonstrates:
@@ -22,11 +22,12 @@ What it demonstrates:
 - Trace saving for later inspection and evaluation
 - HTTP retry with exponential backoff for real providers
 - controller + worker multi-machine orchestration
-- worker heartbeats and online status tracking
+- worker heartbeats, pull-based task execution, and readiness tracking
 - MoE sparse routing to a top-k proposal worker set
 - MoA second-round review and refinement on a separate top-k reviewer set
 - recommended-model onboarding and local Ollama startup guidance
 - distributed task trace, latency, completion rate, and user rating capture
+- callback reachability diagnostics against `/api/status` without requiring callback mode for execution
 
 ## Quick start
 
