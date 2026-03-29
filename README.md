@@ -169,3 +169,4 @@ The repo-local skill only works after the repository already exists on disk.
 - [中文说明](./README.zh-CN.md)
 - [English Guide](./README.en.md)
 - [Technical README](./swarmos_demo/README.md)
+- [节点接入与平台交互说明](./docs/节点接入与平台交互说明.md)
