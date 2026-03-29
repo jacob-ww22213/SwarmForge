@@ -2,20 +2,27 @@
 """SwarmOS Web Demo — zero-dependency HTTP server.
 
 Usage:
-    python3 serve.py              # http://localhost:8000
-    python3 serve.py --port 9000  # http://localhost:9000
+    python3 serve.py                                       # mock, http://localhost:8000
+    python3 serve.py --provider openai-compatible \\
+        --base-url https://api.example.com/v1 \\
+        --api-key sk-... --model gpt-4o                    # real LLM
+    python3 serve.py --provider ollama --model qwen2.5:7b  # local Ollama
 """
 from __future__ import annotations
 
 import argparse
 import json
+import logging
 import sys
+import time
 import urllib.parse
-from functools import partial
-from http import HTTPStatus
+from concurrent.futures import ThreadPoolExecutor, as_completed
+from dataclasses import asdict
+from datetime import datetime, timezone
 from http.server import HTTPServer, SimpleHTTPRequestHandler
 from pathlib import Path
 from typing import Any
+import uuid
 
 PROJECT_ROOT = Path(__file__).resolve().parent
 WEB_DIR = PROJECT_ROOT / "web"
@@ -25,41 +32,81 @@ sys.path.insert(0, str(PROJECT_ROOT))
 
 from core.task_parser import analyze_task
 from core.router import route_experts, reload_reputation
-from core.types import normalize_task
+from core.types import ExpertProfile, ExpertProposal, WorkflowTrace, normalize_task
 from core.reputation import update_reputation
-from providers.mock import MockProvider
+from providers import build_provider
 from providers.base import BaseProvider
-from reporting.console import render_console_report
-from reporting.markdown import render_markdown_report
-from dataclasses import asdict
-from concurrent.futures import ThreadPoolExecutor
-import uuid
-from datetime import datetime, timezone
+from providers.mock import MockProvider
+
+logger = logging.getLogger(__name__)
+
+_active_provider: BaseProvider | None = None
+
+_PROPOSE_TIMEOUT_S = 120
 
 
-def _run_single(task: str, top_k: int = 3, with_baseline: bool = False) -> dict[str, Any]:
+def _get_provider() -> BaseProvider:
+    global _active_provider
+    if _active_provider is None:
+        _active_provider = MockProvider()
+    return _active_provider
+
+
+def _safe_propose(
+    provider: BaseProvider,
+    expert: ExpertProfile,
+    task: str,
+    context: dict[str, Any],
+) -> ExpertProposal | None:
+    try:
+        return provider.propose(expert, task, context)
+    except Exception as exc:
+        logger.warning("Expert %s failed: %s", expert.name, exc)
+        return None
+
+
+def _run_single(task: str, top_k: int = 3, with_baseline: bool = False) -> WorkflowTrace:
     """Run the full pipeline and return the trace dict."""
+    t0 = time.monotonic()
     task = normalize_task(task)
     profile = analyze_task(task)
     routed, scores = route_experts(task=task, profile=profile, top_k=top_k)
     context: dict[str, Any] = {"profile": profile, "scores": scores}
-    provider: BaseProvider = MockProvider()
+    provider = _get_provider()
 
+    errors: list[str] = []
     with ThreadPoolExecutor(max_workers=len(routed)) as pool:
-        futures = [pool.submit(provider.propose, expert, task, context) for expert, _ in routed]
-        proposals = [f.result() for f in futures]
+        future_to_expert = {
+            pool.submit(_safe_propose, provider, expert, task, context): expert
+            for expert, _ in routed
+        }
+        results: dict[str, ExpertProposal] = {}
+        try:
+            for future in as_completed(future_to_expert, timeout=_PROPOSE_TIMEOUT_S):
+                expert = future_to_expert[future]
+                proposal = future.result()
+                if proposal is not None:
+                    results[expert.key] = proposal
+                else:
+                    errors.append(f"{expert.name}: proposal failed")
+        except TimeoutError:
+            errors.append("Proposal phase timed out")
 
     order = {e.key: i for i, (e, _) in enumerate(routed)}
-    proposals.sort(key=lambda p: order[p.expert_key])
+    proposals = sorted(results.values(), key=lambda p: order.get(p.expert_key, 999))
 
     critique = provider.critique(task=task, routed=routed, proposals=proposals, context=context)
     aggregate = provider.aggregate(task=task, routed=routed, proposals=proposals, critique=critique, context=context)
 
     baseline = None
     if with_baseline:
-        baseline = provider.baseline(task=task, context=context)
+        try:
+            baseline = provider.baseline(task=task, context=context)
+        except Exception as exc:
+            errors.append(f"Baseline failed: {exc}")
 
-    trace: dict[str, Any] = {
+    duration_ms = int((time.monotonic() - t0) * 1000)
+    trace: WorkflowTrace = {
         "run_id": uuid.uuid4().hex[:12],
         "timestamp": datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
         "task": task,
@@ -69,16 +116,19 @@ def _run_single(task: str, top_k: int = 3, with_baseline: bool = False) -> dict[
         "proposals": [asdict(p) for p in proposals],
         "critique": critique,
         "aggregate": aggregate,
+        "duration_ms": duration_ms,
     }
     if baseline is not None:
         trace["baseline"] = baseline
+    if errors:
+        trace["errors"] = errors
 
     return trace
 
 
 def _run_multi_round(
     task: str, history: list[dict[str, Any]], feedback: str, top_k: int = 3
-) -> dict[str, Any]:
+) -> WorkflowTrace:
     """Run one round of multi-round collaboration with accumulated context."""
     round_num = len(history) + 1
     enriched_task = task
@@ -152,6 +202,10 @@ class APIHandler(SimpleHTTPRequestHandler):
             self.path = "/index.html"
             return super().do_GET()
 
+        if path == "/api/status":
+            p = _get_provider()
+            return self._json_response({"provider": p.mode})
+
         if path == "/api/traces":
             return self._json_response(_list_traces())
 
@@ -219,7 +273,19 @@ def main() -> None:
     parser = argparse.ArgumentParser(description="SwarmOS Web Demo server.")
     parser.add_argument("--port", type=int, default=8000)
     parser.add_argument("--host", default="127.0.0.1")
+    parser.add_argument(
+        "--provider",
+        choices=("mock", "openai-compatible", "ollama"),
+        default="mock",
+    )
+    parser.add_argument("--base-url", help="Base URL for real providers.")
+    parser.add_argument("--api-key", help="API key for openai-compatible provider.")
+    parser.add_argument("--model", help="Model name for real providers.")
     args = parser.parse_args()
+
+    global _active_provider
+    _active_provider = build_provider(args)
+    print(f"Provider: {_active_provider.mode}")
 
     OUTPUTS_DIR.mkdir(parents=True, exist_ok=True)
     server = HTTPServer((args.host, args.port), APIHandler)

@@ -4,12 +4,13 @@ A runnable MVP for the "many small experts + routing + collaboration" idea.
 
 What it demonstrates:
 - Task parsing and domain detection
-- Sparse expert routing with reputation scoring
-- Parallel expert proposals
+- Sparse expert routing with reputation scoring and learned scores
+- Parallel expert proposals with fault tolerance
 - Critic review
 - Aggregation into a final answer
 - Single-model baseline comparison
 - Trace saving for later inspection and evaluation
+- HTTP retry with exponential backoff for real providers
 
 ## Quick start
 
@@ -47,6 +48,15 @@ python3 cli.py \
   --save-json outputs/task_01.json
 ```
 
+Rebuild learned routing scores from all saved traces (V4):
+
+```bash
+python3 cli.py \
+  --task-file examples/task_01.txt \
+  --learn \
+  --save-json outputs/task_01.json
+```
+
 Evaluate across multiple traces:
 
 ```bash
@@ -66,6 +76,7 @@ python3 evaluate.py outputs/task_01.json outputs/task_02.json outputs/task_03.js
 | `--top-k N` | Number of non-planner experts to route (default 3) |
 | `--baseline` | Also run a single-model baseline for comparison |
 | `--update-reputation` | Update expert reputation scores after this run |
+| `--learn` | Rebuild learned routing scores from all saved traces |
 | `--save-markdown PATH` | Write markdown report |
 | `--save-json PATH` | Write JSON trace |
 
@@ -104,15 +115,16 @@ swarmos_demo/
 ├── core/                     # A-line: engine & orchestration
 │   ├── types.py              # Shared types (TypedDict + dataclass)
 │   ├── task_parser.py        # Task analysis (language / domain / action / risk)
-│   ├── router.py             # Expert scoring & selection with reputation
-│   ├── workflow.py           # Main orchestration pipeline
+│   ├── router.py             # Expert scoring & selection with reputation + learned scores
+│   ├── learned_router.py     # Trace-based learned routing scores (V4)
+│   ├── workflow.py           # Main orchestration with fault tolerance (V4)
 │   ├── storage.py            # Trace / markdown persistence
 │   └── reputation.py         # Expert reputation store
 │
 ├── providers/                # A-line: inference backends
 │   ├── base.py               # BaseProvider abstraction
 │   ├── mock.py               # Offline mock (delegates to experts/)
-│   ├── openai_compatible.py  # OpenAI-compatible HTTP provider
+│   ├── openai_compatible.py  # OpenAI-compatible HTTP provider (retry + backoff V4)
 │   └── ollama.py             # Ollama local provider
 │
 ├── experts/                  # B-line: expert content & strategies
@@ -152,17 +164,23 @@ Each run produces a trace with:
   "proposals": [...],
   "critique": { "focus": [...], "duplicates": [...], "next_checks": [...] },
   "aggregate": { "final_summary": "...", "consensus": [...], ... },
-  "baseline": { "summary": "...", "recommendations": [...], ... }
+  "baseline": { "summary": "...", "recommendations": [...], ... },
+  "duration_ms": 42,
+  "errors": []
 }
 ```
 
 ## Web Demo (V3)
 
-Start the web server (zero dependencies, pure stdlib):
+Start the web server (zero dependencies, pure stdlib). V4: supports all providers.
 
 ```bash
-python3 serve.py              # http://127.0.0.1:8000
-python3 serve.py --port 9000  # custom port
+python3 serve.py                                       # mock (default)
+python3 serve.py --port 9000                           # custom port
+python3 serve.py --provider openai-compatible \
+  --base-url https://api.example.com/v1 \
+  --api-key sk-... --model gpt-4o                      # real LLM
+python3 serve.py --provider ollama --model qwen2.5:7b  # local Ollama
 ```
 
 Features:
@@ -178,6 +196,7 @@ Features:
 | `/api/traces` | GET | List saved traces |
 | `/api/traces/<file>` | GET | Get full trace by filename |
 | `/api/multi-round` | POST | Multi-round `{"task":"...","history":[...],"feedback":"..."}` |
+| `/api/status` | GET | Current provider info |
 
 ## Suggested experiments
 

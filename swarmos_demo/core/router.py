@@ -2,11 +2,13 @@ from __future__ import annotations
 
 from typing import Any
 
+from core.learned_router import learned_bonus, load_learned_scores
 from core.reputation import load_reputation, reputation_bonus
 from core.types import ExpertProfile, TaskProfile, clamp
 from experts.registry import EXPERTS
 
 _reputation_store: dict[str, float] | None = None
+_learned_store: dict[str, float] | None = None
 
 
 def _get_reputation_store() -> dict[str, float]:
@@ -16,14 +18,32 @@ def _get_reputation_store() -> dict[str, float]:
     return _reputation_store
 
 
+def _get_learned_store() -> dict[str, float]:
+    global _learned_store
+    if _learned_store is None:
+        _learned_store = load_learned_scores()
+    return _learned_store
+
+
 def reload_reputation() -> None:
     """Force-reload reputation store from disk (call after update)."""
     global _reputation_store
     _reputation_store = None
 
 
+def reload_learned() -> None:
+    """Force-reload learned scores from disk."""
+    global _learned_store
+    _learned_store = None
+
+
 def score_expert(expert: ExpertProfile, task: str, profile: TaskProfile) -> float:
-    score = 0.05 + expert.bias + reputation_bonus(_get_reputation_store(), expert.key)
+    score = (
+        0.05
+        + expert.bias
+        + reputation_bonus(_get_reputation_store(), expert.key)
+        + learned_bonus(_get_learned_store(), expert.key)
+    )
     lowered = task.lower()
     for keyword in expert.keywords:
         if keyword.lower() in lowered or keyword in task:

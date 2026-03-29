@@ -3,7 +3,7 @@ from __future__ import annotations
 import re
 from dataclasses import dataclass
 from pathlib import Path
-from typing import TypedDict
+from typing import Any, TypedDict
 
 
 # ---------------------------------------------------------------------------
@@ -38,6 +38,30 @@ class BaselineResult(TypedDict):
     recommendations: list[str]
     risks: list[str]
     confidence: float
+
+
+class _WorkflowTraceRequired(TypedDict):
+    run_id: str
+    timestamp: str
+    task: str
+    provider: str
+    profile: TaskProfile
+    routed: list[dict[str, Any]]
+    proposals: list[dict[str, Any]]
+    critique: CritiqueReport
+    aggregate: AggregateResult
+
+
+class WorkflowTrace(_WorkflowTraceRequired, total=False):
+    """Formal trace structure matching 03_模块对接文档 §3.8.
+
+    Required keys are in _WorkflowTraceRequired; optional keys here.
+    """
+    baseline: BaselineResult
+    round: int
+    user_feedback: str
+    duration_ms: int
+    errors: list[str]
 
 
 # ---------------------------------------------------------------------------

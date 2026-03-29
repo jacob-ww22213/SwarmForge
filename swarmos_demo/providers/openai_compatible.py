@@ -1,13 +1,31 @@
 from __future__ import annotations
 
 import json
+import logging
 import textwrap
+import time
 import urllib.error
 import urllib.request
+from http.client import RemoteDisconnected
 from typing import Any
 
 from core.types import ExpertProfile, ExpertProposal, clamp
 from providers.base import BaseProvider, ProviderError
+
+logger = logging.getLogger(__name__)
+
+_MAX_RETRIES = 3
+_BASE_BACKOFF_S = 1.0
+_REQUEST_TIMEOUT_S = 60
+
+
+def _is_retryable(exc: Exception) -> bool:
+    """Decide if an HTTP error warrants a retry (429, 5xx, transient)."""
+    if isinstance(exc, urllib.error.HTTPError):
+        return exc.code == 429 or exc.code >= 500
+    if isinstance(exc, (urllib.error.URLError, RemoteDisconnected, TimeoutError, ConnectionError)):
+        return True
+    return False
 
 
 class OpenAICompatibleProvider(BaseProvider):
@@ -28,25 +46,40 @@ class OpenAICompatibleProvider(BaseProvider):
             ],
             "temperature": 0.2,
         }
-        request = urllib.request.Request(
-            endpoint,
-            data=json.dumps(payload).encode("utf-8"),
-            headers={
-                "Content-Type": "application/json",
-                "Authorization": f"Bearer {self.api_key}",
-            },
-            method="POST",
-        )
-        try:
-            with urllib.request.urlopen(request, timeout=60) as response:
-                body = json.loads(response.read().decode("utf-8"))
-        except urllib.error.URLError as exc:
-            raise ProviderError(f"OpenAI-compatible request failed: {exc}") from exc
+        last_exc: Exception | None = None
+        for attempt in range(_MAX_RETRIES):
+            request = urllib.request.Request(
+                endpoint,
+                data=json.dumps(payload).encode("utf-8"),
+                headers={
+                    "Content-Type": "application/json",
+                    "Authorization": f"Bearer {self.api_key}",
+                },
+                method="POST",
+            )
+            try:
+                with urllib.request.urlopen(request, timeout=_REQUEST_TIMEOUT_S) as response:
+                    body = json.loads(response.read().decode("utf-8"))
+                try:
+                    return body["choices"][0]["message"]["content"].strip()
+                except (KeyError, IndexError, TypeError) as exc:
+                    raise ProviderError(f"Unexpected response payload: {body}") from exc
+            except ProviderError:
+                raise
+            except Exception as exc:
+                last_exc = exc
+                if attempt < _MAX_RETRIES - 1 and _is_retryable(exc):
+                    wait = _BASE_BACKOFF_S * (2 ** attempt)
+                    logger.warning(
+                        "Retry %d/%d after %.1fs (%s)", attempt + 1, _MAX_RETRIES, wait, exc
+                    )
+                    time.sleep(wait)
+                    continue
+                break
 
-        try:
-            return body["choices"][0]["message"]["content"].strip()
-        except (KeyError, IndexError, TypeError) as exc:
-            raise ProviderError(f"Unexpected response payload: {body}") from exc
+        raise ProviderError(
+            f"OpenAI-compatible request failed after {_MAX_RETRIES} attempts: {last_exc}"
+        ) from last_exc
 
     def _prompt_for_expert(self, expert: ExpertProfile, task: str) -> tuple[str, str]:
         system_prompt = (
