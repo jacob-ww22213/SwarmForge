@@ -87,7 +87,7 @@ python3 -m venv .venv
 如果别人下载仓库后也使用 Codex，可以直接说：
 
 ```text
-使用 swarmforge-demo-runner 启动本地演示
+使用 swarmforge-demo-runner 下载并启动本地小模型节点
 ```
 
 或者直接执行脚本：
@@ -95,6 +95,59 @@ python3 -m venv .venv
 ```bash
 ./.codex/skills/swarmforge-demo-runner/scripts/start_controller.sh
 ```
+
+这个 skill 现在重点解决的是 4 件事：
+- 告诉用户怎样启动 controller
+- 告诉用户怎样启动 Ollama worker
+- 告诉用户怎样让 worker 保持在线
+- 告诉用户怎样验证节点已经在线并可接任务
+
+需要明确区分两层：
+- `Ollama` 负责真正托管小模型
+- `worker` 负责把这台机器注册成在线节点
+
+也就是说，只有同时满足下面两点，页面里这个节点才算真正可用：
+- Ollama 还在运行
+- worker 进程还在运行并持续发 heartbeat
+
+如果你想让用户快速理解“下载模型并保持在线”，推荐按这个顺序操作：
+
+1. 启动 controller
+2. 在节点机器上启动 `ollama serve`
+3. 启动 SwarmForge worker
+4. 用页面里的“下载模型”按钮，或直接执行 `ollama pull 模型名`
+5. 在页面确认节点状态是 `ONLINE`
+6. 不要关闭 Ollama 或 worker 终端，否则节点会掉线
+
+一个最小真实模型例子：
+
+```bash
+ollama serve
+```
+
+```bash
+ollama pull qwen2.5:7b
+```
+
+```bash
+python3 -m swarmos_demo.worker \
+  --controller-url http://127.0.0.1:8010 \
+  --public-url http://127.0.0.1:8021 \
+  --host 127.0.0.1 \
+  --port 8021 \
+  --provider ollama \
+  --base-url http://127.0.0.1:11434/v1 \
+  --model qwen2.5:7b \
+  --worker-id worker-a \
+  --name Worker-A \
+  --role-key coding_worker \
+  --role-name "Coding Worker"
+```
+
+如果想保持在线状态更稳定，建议：
+- 用单独终端标签页运行 controller 和 worker
+- 或使用 `tmux` / `screen`
+- 或者用 `nohup` / 进程管理器做长时间本地演示
 
 ## 如何运行 Demo
 
@@ -190,6 +243,30 @@ http://控制器IP:8010
 - 输入任务，先做 MoE 路由选择第一轮 worker，再做第二轮 MoA 精炼
 - 查看每个节点的结果、耗时和聚合结果
 - 给本次结果打满意度分数
+
+### 3.1 当前项目的真实运行顺序
+
+如果你要给别人演示“下载小模型并上线节点”，推荐直接照这个流程：
+
+1. controller 机器启动 `swarmos_demo.controller`
+2. worker 机器启动 `ollama serve`
+3. worker 机器启动 `swarmos_demo.worker`
+4. worker 自动向 controller 发 heartbeat
+5. 浏览器打开 controller 页面，确认节点显示为 `ONLINE`
+6. 在页面里下载或切换模型
+7. 用户在页面输入任务
+8. controller 执行 MoE 路由和两轮 MoA 协作
+9. 页面展示每个 worker 的输出、聚合结果、耗时和评分
+
+这一步里最容易被误解的是：
+- 下载模型不等于节点在线
+- 节点在线也不等于模型已经下载完成
+
+真正可工作的条件是：
+- Ollama 在运行
+- 目标模型已经可用
+- worker 进程在运行
+- controller 能访问到 worker 的 `public_url`
 
 ### 4. 使用真实模型
 

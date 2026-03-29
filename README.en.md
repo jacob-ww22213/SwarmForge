@@ -86,8 +86,58 @@ Bundled scripts:
 If another Codex user has the repo locally, they can invoke it with a request like:
 
 ```text
-Use swarmforge-demo-runner to launch the local demo
+Use swarmforge-demo-runner to download and launch a local model worker
 ```
+
+This skill is meant to explain and automate four things:
+- how to start the controller
+- how to start an Ollama-backed worker
+- how to keep the worker online
+- how to verify that the node is actually available to the controller
+
+There are two separate runtime layers:
+- `Ollama` hosts the local model
+- the SwarmForge `worker` keeps that machine registered as an online node
+
+So a node is only truly usable when:
+- Ollama is still running
+- the worker process is still running and sending heartbeats
+
+Recommended operator flow:
+
+1. start the controller
+2. run `ollama serve` on the worker machine
+3. start the SwarmForge worker
+4. pull the model from the dashboard, or run `ollama pull MODEL`
+5. verify the node appears as `ONLINE`
+6. keep both Ollama and the worker process alive
+
+Minimal real-model example:
+
+```bash
+ollama serve
+```
+
+```bash
+ollama pull qwen2.5:7b
+```
+
+```bash
+python3 -m swarmos_demo.worker \
+  --controller-url http://127.0.0.1:8010 \
+  --public-url http://127.0.0.1:8021 \
+  --host 127.0.0.1 \
+  --port 8021 \
+  --provider ollama \
+  --base-url http://127.0.0.1:11434/v1 \
+  --model qwen2.5:7b \
+  --worker-id worker-a \
+  --name Worker-A \
+  --role-key coding_worker \
+  --role-name "Coding Worker"
+```
+
+For a more stable local demo, keep the controller and worker in separate terminal tabs or run them under `tmux`, `screen`, or another long-running process manager.
 
 ## How To Run the Demo
 
@@ -183,6 +233,30 @@ The distributed dashboard supports:
 - MoE top-k routing for proposal workers and MoA second-round review workers
 - per-worker results, latency, and aggregated output
 - 1 to 5 user satisfaction ratings
+
+### 3.1 Actual operator run order
+
+If you want other users to understand the current project flow clearly, use this exact order:
+
+1. start `swarmos_demo.controller` on the controller machine
+2. run `ollama serve` on each worker machine
+3. start `swarmos_demo.worker` on each worker machine
+4. let workers register and send heartbeats
+5. open the controller page and confirm the node is `ONLINE`
+6. pull or switch the model
+7. submit a task from the browser
+8. let the controller run MoE routing and two-round MoA collaboration
+9. inspect worker outputs, aggregate output, latency, and rating
+
+The most important distinction is:
+- downloading a model is not the same as having an online node
+- having an online node is not the same as having a ready local model
+
+The system works only when all of these are true:
+- Ollama is running
+- the target model exists locally
+- the worker process is running
+- the controller can reach the worker `public_url`
 
 ### 4. Run with Real Models
 

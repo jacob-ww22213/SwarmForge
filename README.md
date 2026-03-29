@@ -63,6 +63,28 @@ python3 -m swarmos_demo.worker \
 
 Then open the distributed dashboard at `http://CONTROLLER_IP:8010`.
 
+## Distributed Run Flow
+
+The distributed path is:
+
+1. start the controller
+2. start Ollama on each worker machine
+3. start a worker process on each worker machine
+4. verify the worker appears online in the controller dashboard
+5. pull or switch models from the dashboard if needed
+6. submit a task from the browser
+7. let the controller run MoE routing and two-round MoA collaboration
+8. inspect per-worker output, aggregate output, latency, and ratings
+
+Important:
+- the model is served by Ollama
+- the node appears online only while the worker process is still running
+- for real local-model demos, keep both Ollama and the worker process alive
+
+This repository also includes a local Codex skill for that flow:
+
+- `.codex/skills/swarmforge-demo-runner/SKILL.md`
+
 ## Main Entry Points
 
 - `swarmos_demo/cli.py`: CLI entry
