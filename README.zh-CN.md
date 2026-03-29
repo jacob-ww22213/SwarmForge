@@ -81,7 +81,7 @@ python3 -m venv .venv
 - `PATCH`：修复、文档更新、小型体验改进
 
 当前版本：
-- `0.5.1`
+- `0.6.0`
 
 ## 一键启动与健康检查
 
@@ -104,6 +104,11 @@ python3 -m venv .venv
 ```bash
 CONTROLLER_BIND_HOST=0.0.0.0 CONTROLLER_PUBLIC_HOST=127.0.0.1 ./scripts/start-local-demo.sh mock
 ```
+
+如果要把 demo 作为 Linux 常驻服务部署，并切到本地 Ollama 小模型节点，请看：
+
+- [deploy/systemd/README.md](./deploy/systemd/README.md)
+- [scripts/install-systemd-demo.sh](./scripts/install-systemd-demo.sh)
 
 说明：
 - `start-local-demo.sh mock` 会一键拉起 controller 和两个 mock worker

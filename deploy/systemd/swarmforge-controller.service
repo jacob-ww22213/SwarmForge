@@ -1,0 +1,18 @@
+[Unit]
+Description=SwarmForge controller
+After=network-online.target swarmforge-firewall.service
+Wants=network-online.target swarmforge-firewall.service
+
+[Service]
+Type=simple
+User=root
+WorkingDirectory=/opt/swarmforge
+Environment=APP_ROOT=/opt/swarmforge
+Environment=PYTHONUNBUFFERED=1
+EnvironmentFile=-/etc/swarmforge/controller.env
+ExecStart=/bin/bash -lc 'exec "$APP_ROOT/.venv/bin/python" -m swarmos_demo.controller --host "${CONTROLLER_HOST:-0.0.0.0}" --port "${CONTROLLER_PORT:-8010}" --stale-after "${STALE_AFTER:-20}"'
+Restart=always
+RestartSec=3
+
+[Install]
+WantedBy=multi-user.target

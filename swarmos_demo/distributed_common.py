@@ -404,7 +404,7 @@ def pull_ollama_model(base_url: str, model: str) -> dict[str, Any]:
         f"{root}/api/pull",
         method="POST",
         payload={"name": model, "stream": False},
-        timeout=600.0,
+        timeout=1800.0,
     )
 
 

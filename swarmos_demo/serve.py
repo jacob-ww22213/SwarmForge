@@ -291,7 +291,8 @@ class APIHandler(SimpleHTTPRequestHandler):
         self._json_response({"error": "not found"}, 404)
 
     def log_message(self, format: str, *args: Any) -> None:
-        sys.stderr.write(f"[serve] {args[0]} {args[1]} {args[2]}\n")
+        message = format % args if args else format
+        sys.stderr.write(f"[serve] {message}\n")
 
 
 def main() -> None:

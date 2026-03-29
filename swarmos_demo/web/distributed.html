@@ -443,10 +443,13 @@ python3 -m swarmos_demo.worker \
             </div>
             <div class="inline">
               <input type="text" placeholder="模型名，例如 qwen2.5:7b" id="model-${escapeHtml(worker.worker_id)}" value="${escapeHtml(worker.model || "")}">
-              <button onclick="pullModel('${escapeHtml(worker.worker_id)}')">下载模型</button>
-              <button class="secondary" onclick="activateModel('${escapeHtml(worker.worker_id)}')">切换模型</button>
+              <button ${worker.provider === "ollama" ? "" : "disabled"} onclick="pullModel('${escapeHtml(worker.worker_id)}')">下载模型</button>
+              <button class="secondary" ${worker.provider === "ollama" ? "" : "disabled"} onclick="activateModel('${escapeHtml(worker.worker_id)}')">切换模型</button>
             </div>
-            <div class="meta" style="margin-top:10px;">判断节点是否真的可用：Ollama 在线 + 目标模型可用 + worker 持续 heartbeat。</div>
+            <div class="meta" style="margin-top:10px;">
+              判断节点是否真的可用：Ollama 在线 + 目标模型可用 + worker 持续 heartbeat。
+              ${worker.provider === "ollama" ? "" : "当前节点不是 Ollama worker，不能直接下载模型。"}
+            </div>
           </article>
         `).join("");
       }
@@ -586,25 +589,33 @@ python3 -m swarmos_demo.worker \
         const model = document.querySelector(`#model-${CSS.escape(workerId)}`).value.trim();
         if (!model) return;
         document.querySelector("#run-status").textContent = `正在为 ${workerId} 下载模型 ${model}...`;
-        await fetchJson(`/api/workers/${encodeURIComponent(workerId)}/pull-model`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ model }),
-        });
-        document.querySelector("#run-status").textContent = `${workerId} 模型下载完成，请继续确认节点保持 ONLINE`;
-        await refreshAll();
+        try {
+          await fetchJson(`/api/workers/${encodeURIComponent(workerId)}/pull-model`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ model }),
+          });
+          document.querySelector("#run-status").textContent = `${workerId} 模型下载完成，请继续确认节点保持 ONLINE`;
+          await refreshAll();
+        } catch (error) {
+          document.querySelector("#run-status").textContent = `下载失败：${error.message || "unknown error"}`;
+        }
       }
 
       async function activateModel(workerId) {
         const model = document.querySelector(`#model-${CSS.escape(workerId)}`).value.trim();
         if (!model) return;
-        await fetchJson(`/api/workers/${encodeURIComponent(workerId)}/activate-model`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ model }),
-        });
-        document.querySelector("#run-status").textContent = `${workerId} 已切换到模型 ${model}`;
-        await refreshAll();
+        try {
+          await fetchJson(`/api/workers/${encodeURIComponent(workerId)}/activate-model`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ model }),
+          });
+          document.querySelector("#run-status").textContent = `${workerId} 已切换到模型 ${model}`;
+          await refreshAll();
+        } catch (error) {
+          document.querySelector("#run-status").textContent = `切换失败：${error.message || "unknown error"}`;
+        }
       }
 
       async function rateTask(rating) {

@@ -43,7 +43,7 @@ WORKFLOW_PROPOSE_TIMEOUT_S = 120
 # ── OpenAI-compatible provider ───────────────────────────────────────
 PROVIDER_MAX_RETRIES = 3
 PROVIDER_BASE_BACKOFF_S = 1.0
-PROVIDER_REQUEST_TIMEOUT_S = 60
+PROVIDER_REQUEST_TIMEOUT_S = 180
 
 # ── Router score bumps ───────────────────────────────────────────────
 ROUTER_BASE_SCORE = 0.05

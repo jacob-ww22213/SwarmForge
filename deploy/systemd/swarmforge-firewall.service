@@ -1,0 +1,12 @@
+[Unit]
+Description=Open SwarmForge controller port in iptables
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+ExecStart=/bin/bash -lc '/usr/sbin/iptables -C INPUT -p tcp --dport 8010 -j ACCEPT 2>/dev/null || /usr/sbin/iptables -I INPUT 4 -p tcp --dport 8010 -j ACCEPT'
+
+[Install]
+WantedBy=multi-user.target

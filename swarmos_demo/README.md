@@ -5,7 +5,7 @@ A runnable MVP for two related directions:
 - a stage-3 distributed controller + worker small-model network
 
 Version:
-- `0.5.1`
+- `0.6.0`
 - see `/VERSION` and `/CHANGELOG.md`
 
 What it demonstrates:

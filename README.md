@@ -105,6 +105,11 @@ For a single-server deployment where the dashboard should be reachable from outs
 CONTROLLER_BIND_HOST=0.0.0.0 CONTROLLER_PUBLIC_HOST=127.0.0.1 ./scripts/start-local-demo.sh mock
 ```
 
+For persistent Linux deployment with `systemd` and local Ollama workers, see:
+
+- [`deploy/systemd/README.md`](./deploy/systemd/README.md)
+- [`scripts/install-systemd-demo.sh`](./scripts/install-systemd-demo.sh)
+
 ## Distributed Run Flow
 
 The distributed path is:

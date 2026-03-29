@@ -1,0 +1,7 @@
+[Unit]
+Description=SwarmForge demo stack
+Wants=swarmforge-firewall.service swarmforge-controller.service swarmforge-worker@worker-a.service swarmforge-worker@worker-b.service
+After=swarmforge-firewall.service swarmforge-controller.service swarmforge-worker@worker-a.service swarmforge-worker@worker-b.service
+
+[Install]
+WantedBy=multi-user.target

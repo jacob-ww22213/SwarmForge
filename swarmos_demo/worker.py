@@ -9,7 +9,7 @@ import sys
 import threading
 import time
 from dataclasses import asdict, replace
-from http.server import HTTPServer, BaseHTTPRequestHandler
+from http.server import ThreadingHTTPServer, BaseHTTPRequestHandler
 from pathlib import Path
 from typing import Any
 from urllib.parse import urlparse
@@ -254,7 +254,8 @@ class WorkerHandler(BaseHTTPRequestHandler):
         return self._json_response({"error": "not found"}, 404)
 
     def log_message(self, format: str, *args: Any) -> None:
-        sys.stderr.write(f"[worker] {args[0]} {args[1]} {args[2]}\n")
+        message = format % args if args else format
+        sys.stderr.write(f"[worker] {message}\n")
 
 
 def main() -> int:
@@ -285,7 +286,7 @@ def main() -> int:
     heartbeat_thread = threading.Thread(target=RUNTIME.heartbeat_loop, daemon=True)
     heartbeat_thread.start()
 
-    server = HTTPServer((args.host, args.port), WorkerHandler)
+    server = ThreadingHTTPServer((args.host, args.port), WorkerHandler)
     print(f"SwarmOS worker running at {RUNTIME.public_url}")
     print(f"Controller: {args.controller_url}")
     try:

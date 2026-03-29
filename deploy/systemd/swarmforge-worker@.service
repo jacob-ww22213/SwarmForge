@@ -1,0 +1,18 @@
+[Unit]
+Description=SwarmForge worker %i
+After=network-online.target ollama.service swarmforge-controller.service
+Wants=network-online.target ollama.service swarmforge-controller.service
+
+[Service]
+Type=simple
+User=root
+WorkingDirectory=/opt/swarmforge
+Environment=APP_ROOT=/opt/swarmforge
+Environment=PYTHONUNBUFFERED=1
+EnvironmentFile=-/etc/swarmforge/%i.env
+ExecStart=/bin/bash -lc 'exec "$APP_ROOT/.venv/bin/python" -m swarmos_demo.worker --host "${WORKER_HOST:-127.0.0.1}" --port "${WORKER_PORT:-8020}" --controller-url "${CONTROLLER_URL:-http://127.0.0.1:8010}" --public-url "${PUBLIC_URL:-http://127.0.0.1:${WORKER_PORT:-8020}}" --worker-id "${WORKER_ID:-%i}" --name "${NAME:-%i}" --role-key "${ROLE_KEY:-generalist_worker}" --role-name "${ROLE_NAME:-Generalist Worker}" --provider "${PROVIDER:-ollama}" --base-url "${BASE_URL:-http://127.0.0.1:11434/v1}" --model "${MODEL:-qwen2.5:0.5b}" --heartbeat-interval "${HEARTBEAT_INTERVAL:-5}" --temperature "${TEMPERATURE:-0.2}" --max-tokens "${MAX_TOKENS:-512}"'
+Restart=always
+RestartSec=3
+
+[Install]
+WantedBy=multi-user.target

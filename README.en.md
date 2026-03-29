@@ -82,7 +82,7 @@ Versioning follows a lightweight pre-1.0 SemVer-style scheme:
 - `PATCH`: fixes, documentation changes, and small UX improvements
 
 Current version:
-- `0.5.1`
+- `0.6.0`
 
 ## One-Click Start and Health Check
 
@@ -105,6 +105,11 @@ For a single-server deployment that should expose the dashboard publicly while k
 ```bash
 CONTROLLER_BIND_HOST=0.0.0.0 CONTROLLER_PUBLIC_HOST=127.0.0.1 ./scripts/start-local-demo.sh mock
 ```
+
+For persistent Linux deployment with `systemd` and local Ollama workers, see:
+
+- [`deploy/systemd/README.md`](./deploy/systemd/README.md)
+- [`scripts/install-systemd-demo.sh`](./scripts/install-systemd-demo.sh)
 
 Notes:
 - `start-local-demo.sh mock` brings up a controller plus two mock workers

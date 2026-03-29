@@ -7,7 +7,20 @@ This project follows a lightweight SemVer-style versioning scheme while the prod
 - `PATCH`: bug fixes, documentation fixes, test-only changes, or small UX improvements
 
 Current version:
-- `0.5.1`
+- `0.6.0`
+
+## [0.6.0] - 2026-03-29
+
+Added:
+- Linux `systemd` deployment assets for controller, worker instances, firewall bootstrap, and full demo target
+- server-side install script for persistent systemd deployment
+
+Changed:
+- switched the deployed server from mock workers to real Ollama-backed workers using `qwen2.5:0.5b`
+- made controller and worker HTTP servers threaded so long requests no longer freeze the whole UI
+- tightened worker token defaults for low-core CPU deployments and increased request/pull timeouts for Ollama operations
+- improved the front-end model download controls so non-Ollama nodes are disabled and request failures are shown in the status bar
+- hardened log handlers to avoid crashes on unusual request logging paths
 
 ## [0.5.1] - 2026-03-29
 

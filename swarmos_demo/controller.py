@@ -7,7 +7,7 @@ import logging
 import sys
 import time
 from concurrent.futures import ThreadPoolExecutor, as_completed
-from http.server import HTTPServer, SimpleHTTPRequestHandler
+from http.server import ThreadingHTTPServer, SimpleHTTPRequestHandler
 from pathlib import Path
 from threading import Lock
 from typing import Any
@@ -162,7 +162,7 @@ def _dispatch_to_worker(
             f"{worker['public_url'].rstrip('/')}/api/infer",
             method="POST",
             payload=payload,
-            timeout=120.0,
+            timeout=300.0,
         )
     except Exception as exc:
         return {
@@ -445,7 +445,8 @@ class ControllerHandler(SimpleHTTPRequestHandler):
         return self._json_response({"error": "not found"}, 404)
 
     def log_message(self, format: str, *args: Any) -> None:
-        sys.stderr.write(f"[controller] {args[0]} {args[1]} {args[2]}\n")
+        message = format % args if args else format
+        sys.stderr.write(f"[controller] {message}\n")
 
 
 def main() -> int:
@@ -459,7 +460,7 @@ def main() -> int:
     STATE = ControllerState(stale_after_s=args.stale_after)
 
     TASKS_DIR.mkdir(parents=True, exist_ok=True)
-    server = HTTPServer((args.host, args.port), ControllerHandler)
+    server = ThreadingHTTPServer((args.host, args.port), ControllerHandler)
     print(f"SwarmOS controller running at http://{args.host}:{args.port}")
     try:
         server.serve_forever()
