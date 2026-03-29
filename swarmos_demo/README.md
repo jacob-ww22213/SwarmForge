@@ -5,7 +5,7 @@ A runnable MVP for two related directions:
 - a stage-3 distributed controller + worker small-model network
 
 Version:
-- `0.6.0`
+- `0.6.1`
 - see `/VERSION` and `/CHANGELOG.md`
 
 What it demonstrates:
@@ -25,7 +25,7 @@ What it demonstrates:
 - worker heartbeats and online status tracking
 - MoE sparse routing to a top-k proposal worker set
 - MoA second-round review and refinement on a separate top-k reviewer set
-- per-worker model pull / model switch support for Ollama
+- recommended-model onboarding and local Ollama startup guidance
 - distributed task trace, latency, completion rate, and user rating capture
 
 ## Quick start
@@ -100,8 +100,8 @@ python3 -m swarmos_demo.worker \
   --provider ollama \
   --base-url http://127.0.0.1:11434/v1 \
   --model qwen2.5:7b \
-  --worker-id worker-a \
-  --name Worker-A \
+  --worker-id my-node-1 \
+  --name "My Node" \
   --role-key coding_worker \
   --role-name "Coding Worker"
 ```
@@ -115,8 +115,8 @@ python3 -m swarmos_demo.worker \
   --host 127.0.0.1 \
   --port 8021 \
   --provider mock \
-  --worker-id worker-a \
-  --name Worker-A \
+  --worker-id my-node-1 \
+  --name "My Node" \
   --role-key coding_worker \
   --role-name "Coding Worker"
 ```
@@ -134,19 +134,17 @@ CONTROLLER_BIND_HOST=0.0.0.0 CONTROLLER_PUBLIC_HOST=127.0.0.1 ./scripts/start-lo
 ```
 
 The distributed UI lets you:
-- view online and offline worker nodes
-- trigger Ollama model downloads on a worker
-- switch the active model on a worker
-- switch between project-side and user-side task entry
+- view online and offline nodes
+- open official model pages from recommended-model cards
+- copy `ollama pull` commands for local setup
+- submit tasks from a unified task entry area
 - route the task to a proposal top-k and a review top-k
-- inspect per-worker proposals and aggregate output
+- inspect per-node proposals and aggregate output
 - rate the final result from 1 to 5
 
-The distributed page is now a dual-role console:
-- project-side operator:
-  inspect the full network and publish platform tasks
-- user-side node owner:
-  learn how to bring a node online, download a model, keep heartbeats alive, and run user tasks
+The distributed page is now a unified console:
+- the controller side shows network state, routing, results, and history
+- the user side is represented by the node onboarding section, recommended-model cards, and local startup instructions
 
 Run with a task file:
 

@@ -8,9 +8,9 @@ SwarmForge 现在包含两条能力线：
 单机模式用于展示 route -> propose -> critique -> aggregate 的协作链路。  
 多机模式用于展示你真正想要的形态：controller 管理在线节点，worker 在各自机器上运行本地模型，用户在页面输入任务后，系统把任务分发给所有在线小模型，再汇总结果、耗时和满意度。
 
-当前分布式前端已经是双角色控制台：
-- 项目方角色：发平台任务、检查系统状态、查看路由和聚合结果
-- 用户角色：下载小模型、启动本地节点、保持在线、从用户角度发任务
+当前分布式前端已经改成统一控制台：
+- controller 服务器只负责路由、展示状态和保存任务历史
+- 测试用户在自己的设备上下载小模型、启动本地 worker，并保持 heartbeat 在线
 
 ## 项目能做什么
 
@@ -23,7 +23,7 @@ SwarmForge 现在包含两条能力线：
 - 支持 Web 页面演示和多轮协作
 - 支持 controller + worker 多机分发
 - 支持节点心跳、在线状态、MoE 路由与两轮协作
-- 支持 Ollama 模型下载与模型切换
+- 支持推荐模型入口、Ollama 本地下载和节点接入说明
 - 支持分布式运行记录、耗时统计和用户评分
 
 ## 仓库结构
@@ -81,7 +81,7 @@ python3 -m venv .venv
 - `PATCH`：修复、文档更新、小型体验改进
 
 当前版本：
-- `0.6.0`
+- `0.6.1`
 
 ## 一键启动与健康检查
 
@@ -167,7 +167,7 @@ CONTROLLER_BIND_HOST=0.0.0.0 CONTROLLER_PUBLIC_HOST=127.0.0.1 ./scripts/start-lo
 1. 启动 controller
 2. 在节点机器上启动 `ollama serve`
 3. 启动 SwarmForge worker
-4. 用页面里的“下载模型”按钮，或直接执行 `ollama pull 模型名`
+4. 用页面里的推荐模型按钮打开官方链接，或直接执行 `ollama pull 模型名`
 5. 在页面确认节点状态是 `ONLINE`
 6. 不要关闭 Ollama 或 worker 终端，否则节点会掉线
 
@@ -190,8 +190,8 @@ python3 -m swarmos_demo.worker \
   --provider ollama \
   --base-url http://127.0.0.1:11434/v1 \
   --model qwen2.5:7b \
-  --worker-id worker-a \
-  --name Worker-A \
+  --worker-id my-node-1 \
+  --name "我的节点" \
   --role-key coding_worker \
   --role-name "Coding Worker"
 ```
@@ -261,8 +261,8 @@ python3 -m swarmos_demo.worker \
   --provider ollama \
   --base-url http://127.0.0.1:11434/v1 \
   --model qwen2.5:7b \
-  --worker-id worker-a \
-  --name Worker-A \
+  --worker-id my-node-1 \
+  --name "我的节点" \
   --role-key coding_worker \
   --role-name "Coding Worker"
 ```
@@ -276,8 +276,8 @@ python3 -m swarmos_demo.worker \
   --host 127.0.0.1 \
   --port 8021 \
   --provider mock \
-  --worker-id worker-a \
-  --name Worker-A \
+  --worker-id my-node-1 \
+  --name "我的节点" \
   --role-key coding_worker \
   --role-name "Coding Worker"
 ```
@@ -290,8 +290,7 @@ http://控制器IP:8010
 
 页面现在支持：
 - 查看在线/离线 worker
-- 给 worker 下载 Ollama 模型
-- 给 worker 切换当前模型
+- 查看推荐模型、打开官方下载链接、复制 `ollama pull` 命令
 - 项目方和用户两个角色都能发任务并查看结果
 - 输入任务，先做 MoE 路由选择第一轮 worker，再做第二轮 MoA 精炼
 - 查看每个节点的结果、耗时和聚合结果
@@ -322,14 +321,18 @@ http://控制器IP:8010
 如果你要给别人演示“下载小模型并上线节点”，推荐直接照这个流程：
 
 1. controller 机器启动 `swarmos_demo.controller`
-2. worker 机器启动 `ollama serve`
-3. worker 机器启动 `swarmos_demo.worker`
+2. 节点机器启动 `ollama serve`
+3. 节点机器启动 `swarmos_demo.worker`
 4. worker 自动向 controller 发 heartbeat
 5. 浏览器打开 controller 页面，确认节点显示为 `ONLINE`
 6. 在页面里下载或切换模型
 7. 用户在页面输入任务
 8. controller 执行 MoE 路由和两轮 MoA 协作
-9. 页面展示每个 worker 的输出、聚合结果、耗时和评分
+9. 页面展示每个在线节点的输出、聚合结果、耗时和评分
+
+需要特别说明：
+- 服务器上的 controller 不必默认安装业务小模型
+- 更符合目标产品的形态是：用户自己下载模型并接入，服务器只做路由与展示
 
 这一步里最容易被误解的是：
 - 下载模型不等于节点在线

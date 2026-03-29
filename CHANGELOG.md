@@ -7,7 +7,15 @@ This project follows a lightweight SemVer-style versioning scheme while the prod
 - `PATCH`: bug fixes, documentation fixes, test-only changes, or small UX improvements
 
 Current version:
-- `0.6.0`
+- `0.6.1`
+
+## [0.6.1] - 2026-03-29
+
+Changed:
+- simplified the distributed front-end by removing the role switcher and hiding internal demo worker ids from the main UI
+- moved model onboarding to recommended-model cards that open official Ollama model pages and provide copyable `ollama pull` commands
+- updated docs to clarify the intended architecture: the server hosts the controller, while users download and run small models on their own nodes
+- stopped the server-side demo workers so the public controller now reflects the controller-only product shape by default
 
 ## [0.6.0] - 2026-03-29
 

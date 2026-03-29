@@ -6,9 +6,9 @@ The repository now includes two complementary modes:
 - an offline orchestration demo for routing, critique, aggregation, and baseline comparison
 - a controller + worker distributed MVP where multiple machines register online, receive tasks, run local models, and report results back
 
-The distributed console now serves two roles on one page:
-- project-side operator: publish tasks, inspect the network, and review aggregate results
-- user-side node owner: download small models, start and keep a worker online, and submit tasks from the user perspective
+The distributed console is now a single unified page:
+- the server-side controller only routes tasks, tracks online nodes, and renders the task history
+- model owners download small models on their own devices, start a local worker, keep heartbeats alive, and then participate in task execution
 
 Language:
 - [中文说明](./README.zh-CN.md)
@@ -63,8 +63,8 @@ python3 -m swarmos_demo.worker \
   --provider ollama \
   --base-url http://127.0.0.1:11434/v1 \
   --model qwen2.5:7b \
-  --worker-id worker-a \
-  --name Worker-A \
+  --worker-id my-node-1 \
+  --name "My Node" \
   --role-key coding_worker \
   --role-name "Coding Worker"
 ```
@@ -79,7 +79,7 @@ This project now uses a lightweight pre-1.0 SemVer-style versioning scheme:
 - `PATCH`: bug fixes, doc fixes, and small UX improvements
 
 Current version:
-- `0.5.1`
+- `0.6.1`
 
 See [`CHANGELOG.md`](./CHANGELOG.md) for release history.
 
@@ -118,21 +118,23 @@ The distributed path is:
 2. start Ollama on each worker machine
 3. start a worker process on each worker machine
 4. verify the worker appears online in the controller dashboard
-5. pull or switch models from the dashboard if needed
+5. let node owners download models from the recommended-model cards or run `ollama pull MODEL` locally
 6. submit a task from the browser
 7. let the controller run MoE routing and two-round MoA collaboration
 8. inspect per-worker output, aggregate output, latency, and ratings
 
 Current front-end responsibilities:
-- project-side view:
-  publish platform tasks and inspect global worker state
-- user-side view:
-  learn how to bring a node online, download a model, keep heartbeats alive, and run user tasks
+- show recommended small models with official download links
+- explain how to start `ollama serve` and the SwarmForge worker on a user-owned machine
+- display online node state without exposing internal demo worker ids
+- submit tasks and inspect MoE routing, two-round MoA results, latency, and ratings
 
 Important:
 - the model is served by Ollama
 - the node appears online only while the worker process is still running
 - for real local-model demos, keep both Ollama and the worker process alive
+
+The controller server itself does not need to host business models for the main product flow. It can run as a pure router + dashboard while external user-owned nodes attach themselves over time.
 
 This repository also includes a local Codex skill for that flow:
 

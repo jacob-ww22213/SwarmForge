@@ -78,28 +78,6 @@
         font-size: 13px;
         line-height: 1.5;
       }
-      .role-switch {
-        display: inline-flex;
-        gap: 8px;
-        flex-wrap: wrap;
-        padding: 6px;
-        border: 1px solid var(--line);
-        border-radius: 999px;
-        background: rgba(255,255,255,0.74);
-      }
-      .role-button {
-        border: none;
-        border-radius: 999px;
-        padding: 10px 14px;
-        background: transparent;
-        color: var(--text);
-        font-weight: 700;
-        cursor: pointer;
-      }
-      .role-button.active {
-        background: linear-gradient(135deg, var(--role), #223f6d);
-        color: white;
-      }
       .pill-row, .actions, .rating-row {
         display: flex;
         gap: 8px;
@@ -174,6 +152,24 @@
         grid-template-columns: 1fr 1fr;
         gap: 10px;
       }
+      .model-grid {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 10px;
+        margin-top: 12px;
+      }
+      .model-card {
+        border: 1px solid var(--line);
+        border-radius: 18px;
+        padding: 14px;
+        background: rgba(255,255,255,0.76);
+        display: grid;
+        gap: 10px;
+      }
+      .model-card .size {
+        font-size: 12px;
+        color: var(--muted);
+      }
       .code-block {
         margin-top: 10px;
         padding: 12px;
@@ -199,7 +195,7 @@
         .hero-grid, .layout { grid-template-columns: 1fr; }
       }
       @media (max-width: 760px) {
-        .flow, .stats, .field-grid-2, .guide-grid { grid-template-columns: 1fr; }
+        .flow, .stats, .field-grid-2, .guide-grid, .model-grid { grid-template-columns: 1fr; }
         .inline { grid-template-columns: 1fr; }
       }
     </style>
@@ -210,20 +206,20 @@
         <div class="eyebrow">SwarmForge Distributed Console</div>
         <div class="hero-grid">
           <div style="display:grid;gap:14px;">
-            <h1>项目方与用户共用的多机小模型控制台</h1>
-            <p>这个页面同时服务两个角色。项目方可以发布任务、检查系统状态和聚合结果；用户可以下载小模型、启动本地节点、保持在线，并从自己的视角发任务和检查结果。</p>
+            <h1>分布式小模型接入与任务控制台</h1>
+            <p>这个页面负责两件事：帮助测试用户下载并启动本地小模型节点，以及让控制器统一展示在线节点、路由过程和任务结果。控制器负责调度，不应该要求服务器自己长期承载业务小模型。</p>
             <div class="flow">
               <div class="flow-card">
-                <strong>1. 用户上线节点</strong>
-                <span>启动 Ollama 与 worker，持续 heartbeat 到 controller。</span>
+                <strong>1. 选择并下载模型</strong>
+                <span>点击推荐模型卡片，进入官方模型页或直接复制 `ollama pull` 命令。</span>
               </div>
               <div class="flow-card">
-                <strong>2. 下载小模型</strong>
-                <span>在页面里输入模型名，直接下载或切换到当前节点。</span>
+                <strong>2. 启动本地节点</strong>
+                <span>在自己的机器上启动 Ollama 与 skill / worker，让节点持续 heartbeat 到 controller。</span>
               </div>
               <div class="flow-card">
-                <strong>3. 双角色发任务</strong>
-                <span>项目方和用户都可以在页面提交任务并查看执行结果。</span>
+                <strong>3. 提交任务</strong>
+                <span>在这里输入任务，由 controller 做 MoE 路由和两轮 MoA 协作。</span>
               </div>
               <div class="flow-card">
                 <strong>4. 检查协作结果</strong>
@@ -234,11 +230,11 @@
           <div style="display:grid;gap:12px;">
             <div class="guide-card">
               <strong>当前系统逻辑</strong>
-              <span>controller 负责调度和展示，worker 负责把本地模型接入成在线节点。只有 Ollama 和 worker 都在运行时，这个节点才真正可用。</span>
+              <span>controller 负责调度和展示；用户自己的设备负责运行小模型并接入成在线节点。只有 Ollama 和 worker 都在运行时，这个节点才真正可用。</span>
             </div>
             <div class="guide-card">
               <strong>快速演示</strong>
-              <span>先启动 controller，再启动 2 个 mock 或 Ollama worker。然后切换到不同角色页签，分别发任务检查输出。</span>
+              <span>先确认 controller 在线，再让测试用户下载模型并启动自己的节点。节点上线后，直接在这里发任务检查输出。</span>
             </div>
           </div>
         </div>
@@ -247,35 +243,18 @@
       <div class="layout">
         <div class="left">
           <section class="panel">
-            <h2>角色入口</h2>
-            <p>你可以切换项目方视角和用户视角。两个角色都能提交任务和查看结果。</p>
-            <div class="field">
-              <div class="role-switch">
-                <button class="role-button active" id="role-project" type="button">项目方视角</button>
-                <button class="role-button" id="role-user" type="button">用户视角</button>
-              </div>
-            </div>
-            <div class="field">
-              <div id="role-help" class="guide-card">
-                <strong>项目方视角</strong>
-                <span>适合做平台任务发布、系统状态检查、节点利用率观察和结果验收。</span>
-              </div>
-            </div>
-          </section>
-
-          <section class="panel">
             <h2>任务发起</h2>
-            <p>当前选中角色会作为任务来源写入历史记录。任务提交后，controller 会执行 MoE 路由和两轮 MoA 协作。</p>
+            <p>在统一入口发起任务。提交后，controller 会执行 MoE 路由和两轮 MoA 协作，并把结果保存在历史记录里。</p>
             <div class="field">
               <label for="task-input">任务描述</label>
               <textarea id="task-input" placeholder="例如：请对一个新的支付功能做多机多模型评审，给出上线前最重要的代码修改、风险和验证项。"></textarea>
             </div>
             <div class="field">
               <div class="pill-row">
-                <button class="pill" type="button" data-role="project" data-task="请从项目方角度，对一个新的支付功能做多机多模型评审，给出上线前最重要的代码修改、风险和验证项。">项目方示例</button>
-                <button class="pill" type="button" data-role="project" data-task="请从平台运营视角，评估当前分布式小模型网络的稳定性、调度风险和下一步优化方向。">平台运营评估</button>
-                <button class="pill" type="button" data-role="user" data-task="请从用户节点提供者视角，评估我下载并接入一个本地模型后，最适合承接什么类型的任务。">用户节点评估</button>
-                <button class="pill" type="button" data-role="user" data-task="请从用户视角，评估当前本地小模型节点对代码审查任务的可用性、局限和改进建议。">用户任务评估</button>
+                <button class="pill" type="button" data-task="请对一个新的支付功能做多机多模型评审，给出上线前最重要的代码修改、风险和验证项。">支付功能评审</button>
+                <button class="pill" type="button" data-task="请评估当前分布式小模型网络的稳定性、调度风险和下一步优化方向。">网络稳定性评估</button>
+                <button class="pill" type="button" data-task="请评估一个新接入的小模型节点最适合承接什么类型的任务。">节点能力评估</button>
+                <button class="pill" type="button" data-task="请检查当前在线节点是否已经准备好接收代码审查任务。">节点就绪检查</button>
               </div>
             </div>
             <div class="field field-grid-2">
@@ -297,38 +276,65 @@
 
           <section class="panel">
             <h2>用户节点接入</h2>
-            <p>这是面向用户的“小模型下载与保持在线”入口说明。下载模型不等于节点在线，必须同时运行 Ollama 和 worker。</p>
+            <p>这里是给测试用户的下载和接入说明。推荐模型点一下就能打开官方模型页；然后在自己的机器上执行 `ollama pull`，再用 skill 或命令启动节点即可。</p>
             <div class="guide-grid" style="margin-top:12px;">
               <div class="guide-card">
                 <strong>步骤 A</strong>
-                <span>先在节点机器上启动 `ollama serve`，让本地模型服务保持可访问。</span>
+                <span>先安装 Ollama，并在自己的机器上运行 `ollama serve`。</span>
               </div>
               <div class="guide-card">
                 <strong>步骤 B</strong>
-                <span>再启动 `swarmos_demo.worker`，把这台机器注册成在线节点。</span>
+                <span>在下面选一个推荐模型，打开官方页面或直接复制 `ollama pull` 命令下载。</span>
               </div>
               <div class="guide-card">
                 <strong>步骤 C</strong>
-                <span>在右侧节点卡片里输入模型名并点击“下载模型”或“切换模型”。</span>
+                <span>下载完成后，使用 skill 或命令启动本地 worker，把自己的机器注册成在线节点。</span>
               </div>
               <div class="guide-card">
                 <strong>步骤 D</strong>
-                <span>保持 Ollama 和 worker 不退出，页面状态持续显示 `ONLINE`。</span>
+                <span>保持 Ollama 和 worker 不退出，回到页面确认节点持续显示 `ONLINE`。</span>
               </div>
             </div>
-            <div class="field">
-              <label for="quick-model">推荐模型</label>
-              <div class="pill-row">
-                <button class="pill" type="button" data-model="qwen2.5:7b">qwen2.5:7b</button>
-                <button class="pill" type="button" data-model="llama3.1:8b">llama3.1:8b</button>
-                <button class="pill" type="button" data-model="deepseek-r1:7b">deepseek-r1:7b</button>
-              </div>
+            <div class="model-grid" id="model-grid">
+              <article class="model-card">
+                <div>
+                  <strong>Qwen2.5 0.5B</strong>
+                  <div class="size">约 398MB · 通用中文任务 · 轻量</div>
+                </div>
+                <p>适合快速接入、轻量推理和低资源演示。</p>
+                <div class="actions">
+                  <button type="button" data-download-model="qwen2.5:0.5b" data-download-url="https://ollama.com/library/qwen2.5:0.5b">官方下载页</button>
+                  <button class="secondary" type="button" data-copy-command="ollama pull qwen2.5:0.5b">复制命令</button>
+                </div>
+              </article>
+              <article class="model-card">
+                <div>
+                  <strong>Llama 3.2 1B</strong>
+                  <div class="size">约 1.3GB · 通用英文/多语任务 · 平衡</div>
+                </div>
+                <p>适合轻量总结、重写、基础问答和边缘设备实验。</p>
+                <div class="actions">
+                  <button type="button" data-download-model="llama3.2:1b" data-download-url="https://ollama.com/library/llama3.2:1b">官方下载页</button>
+                  <button class="secondary" type="button" data-copy-command="ollama pull llama3.2:1b">复制命令</button>
+                </div>
+              </article>
+              <article class="model-card">
+                <div>
+                  <strong>Qwen2.5-Coder 0.5B</strong>
+                  <div class="size">约 398MB · 代码任务 · 轻量</div>
+                </div>
+                <p>适合代码审查、生成和修复类测试场景。</p>
+                <div class="actions">
+                  <button type="button" data-download-model="qwen2.5-coder:0.5b" data-download-url="https://ollama.com/library/qwen2.5-coder:0.5b">官方下载页</button>
+                  <button class="secondary" type="button" data-copy-command="ollama pull qwen2.5-coder:0.5b">复制命令</button>
+                </div>
+              </article>
             </div>
             <div class="field">
-              <label for="quick-model">Skill / 启动文档</label>
+              <label>Skill / 启动文档</label>
               <div class="code-block">使用 swarmforge-demo-runner 下载并启动本地小模型节点</div>
               <div class="code-block">ollama serve
-ollama pull qwen2.5:7b
+ollama pull qwen2.5:0.5b
 python3 -m swarmos_demo.worker \
   --controller-url http://127.0.0.1:8010 \
   --public-url http://127.0.0.1:8021 \
@@ -336,9 +342,9 @@ python3 -m swarmos_demo.worker \
   --port 8021 \
   --provider ollama \
   --base-url http://127.0.0.1:11434/v1 \
-  --model qwen2.5:7b \
-  --worker-id worker-a \
-  --name Worker-A \
+  --model qwen2.5:0.5b \
+  --worker-id my-node-1 \
+  --name "我的节点" \
   --role-key coding_worker \
   --role-name "Coding Worker"</div>
             </div>
@@ -352,8 +358,8 @@ python3 -m swarmos_demo.worker \
 
         <div class="right">
           <section class="panel">
-            <h2>节点状态与模型入口</h2>
-            <p>用户可以在这里为自己的节点下载模型、切换模型，并通过 `ONLINE` 状态确认节点还在持续 heartbeat。</p>
+            <h2>在线节点状态</h2>
+            <p>这里只展示当前已经接入 controller 的在线节点状态，不再暴露内部实现名，也不在这里做模型下载操作。</p>
             <div id="stats" class="stats" style="margin-top:14px;"></div>
             <div id="worker-list" class="worker-list" style="margin-top:14px;"></div>
           </section>
@@ -368,11 +374,7 @@ python3 -m swarmos_demo.worker \
     </div>
 
     <script>
-      const state = { workers: [], tasks: [], currentTask: null, activeRole: "project" };
-      const roleLabels = {
-        project: { title: "项目方视角", text: "适合做平台任务发布、系统状态检查、节点利用率观察和结果验收。" },
-        user: { title: "用户视角", text: "适合做节点接入、模型下载、在线验证，以及从用户角度发任务和检查结果。" },
-      };
+      const state = { workers: [], tasks: [], currentTask: null };
 
       async function fetchJson(url, options = {}) {
         const response = await fetch(url, options);
@@ -397,16 +399,9 @@ python3 -m swarmos_demo.worker \
         return date.toLocaleString("zh-CN", { hour12: false });
       }
 
-      function setActiveRole(role) {
-        state.activeRole = role;
-        document.querySelector("#role-project").classList.toggle("active", role === "project");
-        document.querySelector("#role-user").classList.toggle("active", role === "user");
-        const meta = roleLabels[role];
-        document.querySelector("#role-help").innerHTML = `
-          <strong>${escapeHtml(meta.title)}</strong>
-          <span>${escapeHtml(meta.text)}</span>
-        `;
-        document.querySelector("#run-status").textContent = `${meta.title} 已激活，可以提交任务`;
+      function nodeLabel(workerId) {
+        const index = state.workers.findIndex((worker) => worker.worker_id === workerId);
+        return index >= 0 ? `在线节点 ${index + 1}` : "在线节点";
       }
 
       function renderStats(status) {
@@ -434,21 +429,15 @@ python3 -m swarmos_demo.worker \
           <article class="worker-card">
             <div style="display:flex;justify-content:space-between;gap:12px;align-items:flex-start;">
               <div>
-                <h4>${escapeHtml(worker.name)} / ${escapeHtml(worker.worker_id)}</h4>
-                <div class="meta">${escapeHtml(worker.role_name || "-")} · ${escapeHtml(worker.provider || "-")} · ${escapeHtml(worker.model || "-")}</div>
+                <h4>${escapeHtml(nodeLabel(worker.worker_id))}</h4>
+                <div class="meta">${escapeHtml(worker.provider || "-")} · ${escapeHtml(worker.model || "-")}</div>
                 <div class="meta">上次心跳：${escapeHtml(formatTime(worker.last_seen_iso))}</div>
                 <div class="meta">地址：${escapeHtml(worker.public_url || "-")}</div>
               </div>
               <span class="chip ${worker.online ? "online" : "offline"}">${worker.online ? "ONLINE" : "OFFLINE"}</span>
             </div>
-            <div class="inline">
-              <input type="text" placeholder="模型名，例如 qwen2.5:7b" id="model-${escapeHtml(worker.worker_id)}" value="${escapeHtml(worker.model || "")}">
-              <button ${worker.provider === "ollama" ? "" : "disabled"} onclick="pullModel('${escapeHtml(worker.worker_id)}')">下载模型</button>
-              <button class="secondary" ${worker.provider === "ollama" ? "" : "disabled"} onclick="activateModel('${escapeHtml(worker.worker_id)}')">切换模型</button>
-            </div>
             <div class="meta" style="margin-top:10px;">
-              判断节点是否真的可用：Ollama 在线 + 目标模型可用 + worker 持续 heartbeat。
-              ${worker.provider === "ollama" ? "" : "当前节点不是 Ollama worker，不能直接下载模型。"}
+              已安装模型：${escapeHtml((worker.models_available || []).join(", ") || worker.model || "-")}
             </div>
           </article>
         `).join("");
@@ -464,7 +453,6 @@ python3 -m swarmos_demo.worker \
           <article class="task-card" onclick="loadTask('${escapeHtml(task.task_id)}')">
             <div style="display:flex;justify-content:space-between;gap:12px;align-items:flex-start;">
               <h4>${escapeHtml(task.task_id)}</h4>
-              <span class="chip ${task.requester_role === "user" ? "role-user" : "role-project"}">${task.requester_role === "user" ? "用户" : "项目方"}</span>
             </div>
             <div class="meta">${escapeHtml(formatTime(task.created_at))}</div>
             <div class="meta">完成 ${escapeHtml(task.completed_worker_count || 0)} / ${escapeHtml(task.online_worker_count || 0)} 个 worker</div>
@@ -483,8 +471,8 @@ python3 -m swarmos_demo.worker \
           <article class="result-card">
             <div style="display:flex;justify-content:space-between;gap:12px;align-items:flex-start;">
               <div>
-                <strong>${escapeHtml(item.worker?.name || item.worker_name || item.worker_id || "-")}</strong>
-                <div class="meta">${escapeHtml(item.worker?.role_name || "-")} · ${escapeHtml(item.worker?.model || item.model || "-")}</div>
+                <strong>${escapeHtml(nodeLabel(item.worker?.worker_id || item.worker_id || ""))}</strong>
+                <div class="meta">${escapeHtml(item.worker?.model || item.model || "-")}</div>
                 <div class="meta">Round ${escapeHtml(item.round_index || "-")} · ${escapeHtml(item.mode || "-")} · routing ${escapeHtml(item.routing_score || "-")}</div>
               </div>
               <div class="meta">${escapeHtml(item.latency_ms || 0)} ms</div>
@@ -502,11 +490,10 @@ python3 -m swarmos_demo.worker \
         const routingCards = `
           <article class="result-card">
             <h3>MoE / MoA 路由</h3>
-            <div class="meta" style="margin-top:6px;">任务来源：${escapeHtml(task.requester_role === "user" ? "用户" : "项目方")}</div>
             <strong style="display:block;margin-top:10px;">Round 1 Proposal Workers</strong>
-            <ul>${(task.routing?.proposal || []).map((item) => `<li>${escapeHtml(item.name || item.worker_id)} (${escapeHtml(item.template_key || "-")}) score=${escapeHtml(item.score || 0)}${item.reasons ? ` · ${escapeHtml(item.reasons.join(" | "))}` : ""}</li>`).join("")}</ul>
+            <ul>${(task.routing?.proposal || []).map((item) => `<li>${escapeHtml(nodeLabel(item.worker_id || ""))} (${escapeHtml(item.template_key || "-")}) score=${escapeHtml(item.score || 0)}${item.reasons ? ` · ${escapeHtml(item.reasons.join(" | "))}` : ""}</li>`).join("")}</ul>
             <strong style="display:block;margin-top:10px;">Round 2 Review Workers</strong>
-            <ul>${(task.routing?.review || []).map((item) => `<li>${escapeHtml(item.name || item.worker_id)} (${escapeHtml(item.template_key || "-")}) score=${escapeHtml(item.score || 0)}${item.reasons ? ` · ${escapeHtml(item.reasons.join(" | "))}` : ""}</li>`).join("")}</ul>
+            <ul>${(task.routing?.review || []).map((item) => `<li>${escapeHtml(nodeLabel(item.worker_id || ""))} (${escapeHtml(item.template_key || "-")}) score=${escapeHtml(item.score || 0)}${item.reasons ? ` · ${escapeHtml(item.reasons.join(" | "))}` : ""}</li>`).join("")}</ul>
           </article>
         `;
 
@@ -515,9 +502,7 @@ python3 -m swarmos_demo.worker \
             <div style="display:flex;justify-content:space-between;gap:12px;align-items:flex-start;">
               <div>
                 <h3>聚合结果</h3>
-                <div class="meta">任务来源：${escapeHtml(task.requester_role === "user" ? "用户" : "项目方")}</div>
               </div>
-              <span class="chip ${task.requester_role === "user" ? "role-user" : "role-project"}">${task.requester_role === "user" ? "用户任务" : "项目方任务"}</span>
             </div>
             <p style="margin-top:10px;">${escapeHtml(task.aggregate?.final_summary || "")}</p>
             <strong>Top Recommendations</strong>
@@ -559,8 +544,7 @@ python3 -m swarmos_demo.worker \
         const topK = Number(document.querySelector("#proposal-top-k").value || 3);
         const reviewTopK = Number(document.querySelector("#review-top-k").value || 2);
         if (!task) return;
-        const roleName = state.activeRole === "user" ? "用户" : "项目方";
-        document.querySelector("#run-status").textContent = `${roleName}任务正在执行 MoE 路由和两轮协作...`;
+        document.querySelector("#run-status").textContent = `任务正在执行 MoE 路由和两轮协作...`;
         try {
           const payload = await fetchJson("/api/tasks/run", {
             method: "POST",
@@ -569,11 +553,11 @@ python3 -m swarmos_demo.worker \
               task,
               top_k: topK,
               review_top_k: reviewTopK,
-              requester_role: state.activeRole,
+              requester_role: "console",
             }),
           });
           renderTaskDetail(payload);
-          document.querySelector("#run-status").textContent = `${roleName}任务完成，任务 ${payload.task_id}`;
+          document.querySelector("#run-status").textContent = `任务完成，任务 ${payload.task_id}`;
           await refreshAll();
         } catch (error) {
           document.querySelector("#run-status").textContent = error.message || "运行失败";
@@ -585,36 +569,12 @@ python3 -m swarmos_demo.worker \
         renderTaskDetail(task);
       }
 
-      async function pullModel(workerId) {
-        const model = document.querySelector(`#model-${CSS.escape(workerId)}`).value.trim();
-        if (!model) return;
-        document.querySelector("#run-status").textContent = `正在为 ${workerId} 下载模型 ${model}...`;
+      async function copyText(value, successText) {
         try {
-          await fetchJson(`/api/workers/${encodeURIComponent(workerId)}/pull-model`, {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ model }),
-          });
-          document.querySelector("#run-status").textContent = `${workerId} 模型下载完成，请继续确认节点保持 ONLINE`;
-          await refreshAll();
+          await navigator.clipboard.writeText(value);
+          document.querySelector("#run-status").textContent = successText;
         } catch (error) {
-          document.querySelector("#run-status").textContent = `下载失败：${error.message || "unknown error"}`;
-        }
-      }
-
-      async function activateModel(workerId) {
-        const model = document.querySelector(`#model-${CSS.escape(workerId)}`).value.trim();
-        if (!model) return;
-        try {
-          await fetchJson(`/api/workers/${encodeURIComponent(workerId)}/activate-model`, {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ model }),
-          });
-          document.querySelector("#run-status").textContent = `${workerId} 已切换到模型 ${model}`;
-          await refreshAll();
-        } catch (error) {
-          document.querySelector("#run-status").textContent = `切换失败：${error.message || "unknown error"}`;
+          document.querySelector("#run-status").textContent = "复制失败，请手动复制命令";
         }
       }
 
@@ -630,31 +590,33 @@ python3 -m swarmos_demo.worker \
         await refreshAll();
       }
 
-      document.querySelectorAll("[data-role][data-task]").forEach((button) => {
+      document.querySelectorAll("[data-task]").forEach((button) => {
         button.addEventListener("click", () => {
-          const role = button.dataset.role || "project";
-          setActiveRole(role);
           document.querySelector("#task-input").value = button.dataset.task || "";
-          document.querySelector("#run-status").textContent = `${role === "user" ? "用户" : "项目方"}样例任务已填入，可以直接运行`;
+          document.querySelector("#run-status").textContent = "样例任务已填入，可以直接运行";
         });
       });
 
-      document.querySelectorAll("[data-model]").forEach((button) => {
+      document.querySelectorAll("[data-download-model]").forEach((button) => {
         button.addEventListener("click", () => {
-          const model = button.dataset.model || "";
-          document.querySelectorAll("[id^='model-']").forEach((input) => {
-            input.value = model;
-          });
-          document.querySelector("#run-status").textContent = `已把推荐模型 ${model} 填入所有在线节点输入框`;
+          const model = button.dataset.downloadModel || "";
+          const url = button.dataset.downloadUrl || "";
+          document.querySelector("#run-status").textContent = `正在打开 ${model} 的官方模型页`;
+          window.open(url, "_blank", "noopener,noreferrer");
         });
       });
 
-      document.querySelector("#role-project").addEventListener("click", () => setActiveRole("project"));
-      document.querySelector("#role-user").addEventListener("click", () => setActiveRole("user"));
+      document.querySelectorAll("[data-copy-command]").forEach((button) => {
+        button.addEventListener("click", () => {
+          const command = button.dataset.copyCommand || "";
+          copyText(command, `已复制命令：${command}`);
+        });
+      });
+
       document.querySelector("#run-button").addEventListener("click", runTask);
       document.querySelector("#refresh-button").addEventListener("click", refreshAll);
 
-      setActiveRole("project");
+      document.querySelector("#run-status").textContent = "页面已就绪，可以下载模型或直接提交任务";
       refreshAll().catch((error) => {
         document.querySelector("#run-status").textContent = error.message || "初始化失败";
       });

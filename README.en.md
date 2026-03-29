@@ -7,11 +7,9 @@ SwarmForge now includes two complementary tracks:
 
 The distributed mode is the closer match to the target product: a controller tracks online worker nodes, each worker runs a local model, the browser sends a task to the controller, and the controller dispatches that task to all online small-model nodes before aggregating results, latency, and user satisfaction.
 
-The distributed front-end now serves two roles:
-- project-side operator
-- user-side node owner
-
-Both roles can submit tasks and inspect results from the same page, while the user-side view also explains model download, worker startup, and how to keep a node online.
+The distributed front-end is now a single unified console:
+- the controller server focuses on routing, online-node visibility, and result presentation
+- model owners download small models on their own machines, start a local worker, and keep that node online through heartbeats
 
 ## What This Project Demonstrates
 
@@ -24,7 +22,7 @@ Both roles can submit tasks and inspect results from the same page, while the us
 - web UI demo and multi-round collaboration
 - controller + worker multi-machine orchestration
 - worker heartbeats and online node tracking
-- Ollama model pull and model switch actions from the dashboard
+- recommended-model cards, local Ollama download guidance, and node onboarding instructions
 - distributed task history, latency metrics, and user ratings
 
 ## Repository Layout
@@ -38,7 +36,7 @@ Both roles can submit tasks and inspect results from the same page, while the us
 - `swarmos_demo/controller.py`
   distributed controller for worker registration, task dispatch, aggregation, and metrics
 - `swarmos_demo/worker.py`
-  worker node service for local model execution, heartbeats, model pull, and model switch
+  worker node service for local model execution, heartbeats, and node registration
 - `swarmos_demo/distributed_common.py`
   shared distributed helpers, aggregation logic, and Ollama utilities
 - `swarmos_demo/core/`
@@ -82,7 +80,7 @@ Versioning follows a lightweight pre-1.0 SemVer-style scheme:
 - `PATCH`: fixes, documentation changes, and small UX improvements
 
 Current version:
-- `0.6.0`
+- `0.6.1`
 
 ## One-Click Start and Health Check
 
@@ -162,7 +160,7 @@ Recommended operator flow:
 1. start the controller
 2. run `ollama serve` on the worker machine
 3. start the SwarmForge worker
-4. pull the model from the dashboard, or run `ollama pull MODEL`
+4. open an official model page from the recommended-model cards, or run `ollama pull MODEL`
 5. verify the node appears as `ONLINE`
 6. keep both Ollama and the worker process alive
 
@@ -185,8 +183,8 @@ python3 -m swarmos_demo.worker \
   --provider ollama \
   --base-url http://127.0.0.1:11434/v1 \
   --model qwen2.5:7b \
-  --worker-id worker-a \
-  --name Worker-A \
+  --worker-id my-node-1 \
+  --name "My Node" \
   --role-key coding_worker \
   --role-name "Coding Worker"
 ```
@@ -253,8 +251,8 @@ python3 -m swarmos_demo.worker \
   --provider ollama \
   --base-url http://127.0.0.1:11434/v1 \
   --model qwen2.5:7b \
-  --worker-id worker-a \
-  --name Worker-A \
+  --worker-id my-node-1 \
+  --name "My Node" \
   --role-key coding_worker \
   --role-name "Coding Worker"
 ```
@@ -268,8 +266,8 @@ python3 -m swarmos_demo.worker \
   --host 127.0.0.1 \
   --port 8021 \
   --provider mock \
-  --worker-id worker-a \
-  --name Worker-A \
+  --worker-id my-node-1 \
+  --name "My Node" \
   --role-key coding_worker \
   --role-name "Coding Worker"
 ```
@@ -281,9 +279,9 @@ http://CONTROLLER_IP:8010
 ```
 
 The distributed dashboard supports:
-- online/offline worker visibility
-- Ollama model download per worker
-- model switching per worker
+- online/offline node visibility
+- recommended-model cards with official model links
+- copyable `ollama pull` commands for local setup
 - both project-side and user-side task submission
 - MoE top-k routing for proposal workers and MoA second-round review workers
 - per-worker results, latency, and aggregated output
@@ -320,7 +318,11 @@ If you want other users to understand the current project flow clearly, use this
 6. pull or switch the model
 7. submit a task from the browser
 8. let the controller run MoE routing and two-round MoA collaboration
-9. inspect worker outputs, aggregate output, latency, and rating
+9. inspect node outputs, aggregate output, latency, and rating
+
+Important architecture note:
+- the server-hosted controller does not need to run business models by default
+- the intended product flow is controller-only on the server, with user-owned nodes downloading and running models locally
 
 The most important distinction is:
 - downloading a model is not the same as having an online node
