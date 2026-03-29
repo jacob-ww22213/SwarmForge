@@ -68,6 +68,43 @@ python3 -m venv .venv
 ./.venv/bin/python -m pytest
 ```
 
+## 版本管理
+
+项目现在已经补上正式版本文件和变更日志：
+
+- [VERSION](./VERSION)
+- [CHANGELOG.md](./CHANGELOG.md)
+
+版本规则采用轻量化的 pre-1.0 SemVer：
+- `MAJOR`：架构或工作流有破坏性变化
+- `MINOR`：新增用户可感知功能或重大 demo 升级
+- `PATCH`：修复、文档更新、小型体验改进
+
+当前版本：
+- `0.5.0`
+
+## 一键启动与健康检查
+
+项目根目录新增了 3 个脚本：
+
+- [start-local-demo.sh](./scripts/start-local-demo.sh)
+- [health-check.sh](./scripts/health-check.sh)
+- [stop-local-demo.sh](./scripts/stop-local-demo.sh)
+
+推荐发布前自检流程：
+
+```bash
+./scripts/start-local-demo.sh mock
+./scripts/health-check.sh
+./scripts/stop-local-demo.sh
+```
+
+说明：
+- `start-local-demo.sh mock` 会一键拉起 controller 和两个 mock worker
+- `start-local-demo.sh ollama` 会尝试按 Ollama 模式拉起本地节点
+- `health-check.sh` 会运行 pytest、检查 controller / workers，并分别提交项目方任务和用户任务
+- `stop-local-demo.sh` 会关闭一键脚本拉起的本地进程
+
 ## Codex Skill 启动
 
 仓库里已经自带一个本地 skill：

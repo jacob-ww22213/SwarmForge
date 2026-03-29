@@ -4,6 +4,10 @@ A runnable MVP for two related directions:
 - a routed multi-expert collaboration demo
 - a stage-3 distributed controller + worker small-model network
 
+Version:
+- `0.5.0`
+- see `/VERSION` and `/CHANGELOG.md`
+
 What it demonstrates:
 - Task parsing and domain detection
 - Sparse expert routing with TF-IDF semantic matching, reputation scoring, learned scores, and budget constraints

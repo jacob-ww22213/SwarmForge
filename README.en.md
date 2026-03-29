@@ -69,6 +69,43 @@ Run tests:
 ./.venv/bin/python -m pytest
 ```
 
+## Versioning
+
+The project now includes formal release metadata:
+
+- [VERSION](./VERSION)
+- [CHANGELOG.md](./CHANGELOG.md)
+
+Versioning follows a lightweight pre-1.0 SemVer-style scheme:
+- `MAJOR`: breaking architecture or workflow changes
+- `MINOR`: new user-facing features or major demo upgrades
+- `PATCH`: fixes, documentation changes, and small UX improvements
+
+Current version:
+- `0.5.0`
+
+## One-Click Start and Health Check
+
+The repository now includes three local release scripts:
+
+- [`scripts/start-local-demo.sh`](./scripts/start-local-demo.sh)
+- [`scripts/health-check.sh`](./scripts/health-check.sh)
+- [`scripts/stop-local-demo.sh`](./scripts/stop-local-demo.sh)
+
+Recommended pre-release flow:
+
+```bash
+./scripts/start-local-demo.sh mock
+./scripts/health-check.sh
+./scripts/stop-local-demo.sh
+```
+
+Notes:
+- `start-local-demo.sh mock` brings up a controller plus two mock workers
+- `start-local-demo.sh ollama` starts local workers in Ollama mode
+- `health-check.sh` runs pytest, checks controller / worker APIs, and submits both project-side and user-side smoke-test tasks
+- `stop-local-demo.sh` stops the processes started by the one-click demo launcher
+
 ## Codex Skill Launcher
 
 This repository now includes a local Codex skill:

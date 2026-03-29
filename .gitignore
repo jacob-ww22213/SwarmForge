@@ -3,6 +3,7 @@ __pycache__/
 *.pyc
 .venv/
 .pytest_cache/
+.swarmforge-run/
 swarmos_demo/outputs/.reputation.json
 swarmos_demo/outputs/web_history/
 swarmos_demo/outputs/distributed/

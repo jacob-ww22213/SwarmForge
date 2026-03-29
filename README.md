@@ -14,6 +14,10 @@ Language:
 - [中文说明](./README.zh-CN.md)
 - [English Guide](./README.en.md)
 
+Release metadata:
+- version: [`VERSION`](./VERSION)
+- changelog: [`CHANGELOG.md`](./CHANGELOG.md)
+
 ## Quick Start
 
 Run tests:
@@ -66,6 +70,34 @@ python3 -m swarmos_demo.worker \
 ```
 
 Then open the distributed dashboard at `http://CONTROLLER_IP:8010`.
+
+## Versioning
+
+This project now uses a lightweight pre-1.0 SemVer-style versioning scheme:
+- `MAJOR`: breaking architecture or workflow changes
+- `MINOR`: new user-facing features or major demo upgrades
+- `PATCH`: bug fixes, doc fixes, and small UX improvements
+
+Current version:
+- `0.5.0`
+
+See [`CHANGELOG.md`](./CHANGELOG.md) for release history.
+
+## Release Scripts
+
+The repository now includes repeatable local release scripts:
+
+- [`scripts/start-local-demo.sh`](./scripts/start-local-demo.sh)
+- [`scripts/health-check.sh`](./scripts/health-check.sh)
+- [`scripts/stop-local-demo.sh`](./scripts/stop-local-demo.sh)
+
+Typical flow:
+
+```bash
+./scripts/start-local-demo.sh mock
+./scripts/health-check.sh
+./scripts/stop-local-demo.sh
+```
 
 ## Distributed Run Flow
 
