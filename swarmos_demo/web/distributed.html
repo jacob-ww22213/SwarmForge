@@ -280,19 +280,19 @@
             <div class="guide-grid" style="margin-top:12px;">
               <div class="guide-card">
                 <strong>步骤 A</strong>
-                <span>先安装 Ollama，并在自己的机器上运行 `ollama serve`。</span>
+                <span>先在自己的电脑安装 Ollama，然后运行 `ollama serve`。如果这一台机器还没有下载过本项目，后面优先使用 bootstrap 命令，不要先直接调用 repo 内 skill。</span>
               </div>
               <div class="guide-card">
                 <strong>步骤 B</strong>
-                <span>在下面选一个推荐模型，打开官方页面或直接复制 `ollama pull` 命令下载。</span>
+                <span>在下面选一个推荐模型，打开官方页面或复制 `ollama pull` 命令下载。推荐先用 `qwen2.5:0.5b` 做首次接入测试。</span>
               </div>
               <div class="guide-card">
                 <strong>步骤 C</strong>
-                <span>下载完成后，使用 skill 或命令启动本地 worker，把自己的机器注册成在线节点。</span>
+                <span>第一次接入新电脑：先运行 bootstrap 脚本自动 clone 仓库、创建环境并启动 worker。只有仓库已经在本地，才适合再使用 `swarmforge-demo-runner` 这个 repo 内 skill。</span>
               </div>
               <div class="guide-card">
                 <strong>步骤 D</strong>
-                <span>保持 Ollama 和 worker 不退出，回到页面确认节点持续显示 `ONLINE`。</span>
+                <span>保持 Ollama 和 worker 不退出。回到页面后，如果在线节点数量仍是 0，优先检查 `CONTROLLER_IP` 和 `NODE_PUBLIC_IP` 是否填成了真实地址，而不是 `127.0.0.1`。</span>
               </div>
             </div>
             <div class="model-grid" id="model-grid">
@@ -332,25 +332,41 @@
             </div>
             <div class="field">
               <label>Skill / 启动文档</label>
-              <div class="code-block">使用 swarmforge-demo-runner 下载并启动本地小模型节点</div>
-              <div class="code-block">ollama serve
-ollama pull qwen2.5:0.5b
-请把下面两个地址替换成真实值，不要直接写 127.0.0.1：
+              <div class="code-block">先理解两个地址：
 - CONTROLLER_IP：当前页面所在服务器 IP，例如 31.97.191.47
 - NODE_PUBLIC_IP：这台用户电脑能被 controller 访问到的 IP
 
-python3 -m swarmos_demo.worker \
-  --controller-url http://CONTROLLER_IP:8010 \
-  --public-url http://NODE_PUBLIC_IP:8021 \
-  --host 0.0.0.0 \
-  --port 8021 \
-  --provider ollama \
-  --base-url http://127.0.0.1:11434/v1 \
-  --model qwen2.5:0.5b \
-  --worker-id my-node-1 \
-  --name "我的节点" \
-  --role-key coding_worker \
-  --role-name "Coding Worker"</div>
+不要把远程 controller 写成 127.0.0.1。
+在用户电脑上，127.0.0.1 只代表“这台用户自己的电脑”。</div>
+              <div class="code-block">第一次接入新电脑：先用 bootstrap
+
+1. 先启动本机 Ollama
+   ollama serve
+
+2. 下载模型
+   ollama pull qwen2.5:0.5b
+
+3. 运行 bootstrap
+   CONTROLLER_URL=http://CONTROLLER_IP:8010 \
+   PUBLIC_HOST=NODE_PUBLIC_IP \
+   bash -c "$(curl -fsSL https://raw.githubusercontent.com/jacob-ww22213/SwarmForge/main/scripts/bootstrap-node.sh)"</div>
+              <div class="code-block">仓库已经在本地：再用 repo 内 skill / 脚本
+
+CONTROLLER_URL=http://CONTROLLER_IP:8010 \
+PUBLIC_HOST=NODE_PUBLIC_IP \
+WORKER_BIND_HOST=0.0.0.0 \
+./.codex/skills/swarmforge-demo-runner/scripts/start_ollama_worker.sh \
+  my-node-1 "我的节点" coding_worker "Coding Worker" qwen2.5:0.5b 8021</div>
+              <div class="code-block">接入后检查
+
+1. 保持 `ollama serve` 不退出
+2. 保持 worker 进程不退出
+3. 回到本页面点击“刷新状态”
+4. 在线节点数量应大于 0
+5. 如果仍为 0，优先检查：
+   - CONTROLLER_URL 是否写成了服务器地址
+   - PUBLIC_HOST 是否是 controller 能访问到的当前机器 IP
+   - 本机 8021 端口是否被防火墙拦住</div>
             </div>
           </section>
 
