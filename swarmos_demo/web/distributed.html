@@ -41,6 +41,63 @@
         display: grid;
         gap: 12px;
       }
+      .hero-grid {
+        display: grid;
+        grid-template-columns: 1.3fr 0.7fr;
+        gap: 16px;
+        align-items: start;
+      }
+      .hero-side {
+        display: grid;
+        gap: 12px;
+      }
+      .flow {
+        display: grid;
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+        gap: 10px;
+        margin-top: 8px;
+      }
+      .flow-card {
+        border: 1px solid var(--line);
+        border-radius: 18px;
+        padding: 12px;
+        background: rgba(255,255,255,0.6);
+      }
+      .flow-card strong {
+        display: block;
+        font-size: 14px;
+      }
+      .flow-card span {
+        display: block;
+        margin-top: 6px;
+        color: var(--muted);
+        font-size: 13px;
+        line-height: 1.5;
+      }
+      .demo-box {
+        border: 1px solid var(--line);
+        border-radius: 18px;
+        padding: 14px;
+        background: rgba(255,255,255,0.74);
+      }
+      .demo-box h3 {
+        margin: 0 0 8px;
+      }
+      .pill-row {
+        display: flex;
+        gap: 8px;
+        flex-wrap: wrap;
+      }
+      .pill {
+        border: 1px solid var(--line);
+        border-radius: 999px;
+        background: white;
+        color: var(--text);
+        padding: 8px 12px;
+        cursor: pointer;
+        font-size: 13px;
+        font-weight: 600;
+      }
       .hero h1 { margin: 0; font-size: 42px; line-height: 1.02; letter-spacing: -0.04em; }
       .hero p { margin: 0; color: var(--muted); line-height: 1.7; }
       .layout {
@@ -121,14 +178,68 @@
       .rating-row { display: flex; gap: 8px; margin-top: 12px; flex-wrap: wrap; }
       .rating-row button { padding: 8px 12px; }
       .muted { color: var(--muted); }
+      @media (max-width: 980px) {
+        .hero-grid,
+        .layout {
+          grid-template-columns: 1fr;
+        }
+        .flow {
+          grid-template-columns: 1fr 1fr;
+        }
+      }
+      @media (max-width: 640px) {
+        .flow,
+        .stats {
+          grid-template-columns: 1fr;
+        }
+        .inline {
+          grid-template-columns: 1fr;
+        }
+      }
     </style>
   </head>
   <body>
     <div class="page">
       <section class="hero">
         <div class="meta">SwarmOS Distributed Controller</div>
-        <h1>多机小模型网络控制台</h1>
-        <p>这个页面连接 controller。在线 worker 会定期心跳注册，controller 会把任务分发给所有在线小模型节点，然后聚合结果、记录耗时和满意度。</p>
+        <div class="hero-grid">
+          <div>
+            <h1>多机小模型网络控制台</h1>
+            <p>这是一个可展示的多机 AI 协作 Demo。controller 维护在线节点，按任务做 MoE 稀疏路由，再执行两轮 MoA 协作，把每个节点的输出、耗时、评分和最终聚合结果直接展示出来。</p>
+            <div class="flow">
+              <div class="flow-card">
+                <strong>1. 节点上线</strong>
+                <span>worker 心跳注册模型、角色和地址</span>
+              </div>
+              <div class="flow-card">
+                <strong>2. MoE 路由</strong>
+                <span>controller 选出第一轮 proposal workers</span>
+              </div>
+              <div class="flow-card">
+                <strong>3. MoA 复审</strong>
+                <span>第二轮 review workers 基于上一轮结果继续精炼</span>
+              </div>
+              <div class="flow-card">
+                <strong>4. 结果评测</strong>
+                <span>展示耗时、完成率、风险、满意度和历史记录</span>
+              </div>
+            </div>
+          </div>
+          <div class="hero-side">
+            <div class="demo-box">
+              <h3>演示建议</h3>
+              <p>先启动 2 到 3 个 worker，再点击下面的样例任务按钮，把任务填入输入框后直接运行。</p>
+            </div>
+            <div class="demo-box">
+              <h3>样例任务</h3>
+              <div class="pill-row">
+                <button class="pill" type="button" data-task="请对一个新的支付功能做多机多模型评审，给出上线前最重要的代码修改、风险和验证项。">支付功能评审</button>
+                <button class="pill" type="button" data-task="请为一个分布式小模型平台做 MVP 技术方案评审，给出系统拆分、核心风险和优先级。">平台架构评审</button>
+                <button class="pill" type="button" data-task="请对一个 AI 代码审查系统做路由与评测设计，输出实验方案、基线和失败边界。">评测设计</button>
+              </div>
+            </div>
+          </div>
+        </div>
       </section>
 
       <div class="layout">
@@ -397,6 +508,12 @@
         await refreshAll();
       }
 
+      document.querySelectorAll("[data-task]").forEach((button) => {
+        button.addEventListener("click", () => {
+          document.querySelector("#task-input").value = button.dataset.task || "";
+          document.querySelector("#run-status").textContent = "已填入样例任务，可以直接运行";
+        });
+      });
       document.querySelector("#run-button").addEventListener("click", runTask);
       document.querySelector("#refresh-button").addEventListener("click", refreshAll);
       refreshAll().catch((error) => {
