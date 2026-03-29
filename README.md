@@ -79,7 +79,7 @@ This project now uses a lightweight pre-1.0 SemVer-style versioning scheme:
 - `PATCH`: bug fixes, doc fixes, and small UX improvements
 
 Current version:
-- `0.6.1`
+- `0.6.2`
 
 See [`CHANGELOG.md`](./CHANGELOG.md) for release history.
 

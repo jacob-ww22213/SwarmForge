@@ -80,7 +80,7 @@ Versioning follows a lightweight pre-1.0 SemVer-style scheme:
 - `PATCH`: fixes, documentation changes, and small UX improvements
 
 Current version:
-- `0.6.1`
+- `0.6.2`
 
 ## One-Click Start and Health Check
 
@@ -171,23 +171,28 @@ ollama serve
 ```
 
 ```bash
-ollama pull qwen2.5:7b
+ollama pull qwen2.5:0.5b
 ```
 
 ```bash
 python3 -m swarmos_demo.worker \
-  --controller-url http://127.0.0.1:8010 \
-  --public-url http://127.0.0.1:8021 \
-  --host 127.0.0.1 \
+  --controller-url http://CONTROLLER_IP:8010 \
+  --public-url http://THIS_NODE_IP:8021 \
+  --host 0.0.0.0 \
   --port 8021 \
   --provider ollama \
   --base-url http://127.0.0.1:11434/v1 \
-  --model qwen2.5:7b \
+  --model qwen2.5:0.5b \
   --worker-id my-node-1 \
   --name "My Node" \
   --role-key coding_worker \
   --role-name "Coding Worker"
 ```
+
+Important:
+- if the controller is on another machine, do not use `127.0.0.1` for `--controller-url`
+- on a user machine, `127.0.0.1` only means "this same computer"
+- `--public-url` must also point to an address the controller can actually reach
 
 For a more stable local demo, keep the controller and worker in separate terminal tabs or run them under `tmux`, `screen`, or another long-running process manager.
 
@@ -250,7 +255,7 @@ python3 -m swarmos_demo.worker \
   --port 8020 \
   --provider ollama \
   --base-url http://127.0.0.1:11434/v1 \
-  --model qwen2.5:7b \
+  --model qwen2.5:0.5b \
   --worker-id my-node-1 \
   --name "My Node" \
   --role-key coding_worker \
@@ -263,7 +268,7 @@ For local smoke tests, you can start a mock worker instead:
 python3 -m swarmos_demo.worker \
   --controller-url http://127.0.0.1:8010 \
   --public-url http://127.0.0.1:8021 \
-  --host 127.0.0.1 \
+  --host 0.0.0.0 \
   --port 8021 \
   --provider mock \
   --worker-id my-node-1 \

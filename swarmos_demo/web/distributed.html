@@ -335,10 +335,14 @@
               <div class="code-block">使用 swarmforge-demo-runner 下载并启动本地小模型节点</div>
               <div class="code-block">ollama serve
 ollama pull qwen2.5:0.5b
+请把下面两个地址替换成真实值，不要直接写 127.0.0.1：
+- CONTROLLER_IP：当前页面所在服务器 IP，例如 31.97.191.47
+- NODE_PUBLIC_IP：这台用户电脑能被 controller 访问到的 IP
+
 python3 -m swarmos_demo.worker \
-  --controller-url http://127.0.0.1:8010 \
-  --public-url http://127.0.0.1:8021 \
-  --host 127.0.0.1 \
+  --controller-url http://CONTROLLER_IP:8010 \
+  --public-url http://NODE_PUBLIC_IP:8021 \
+  --host 0.0.0.0 \
   --port 8021 \
   --provider ollama \
   --base-url http://127.0.0.1:11434/v1 \

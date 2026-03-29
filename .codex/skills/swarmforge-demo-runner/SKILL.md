@@ -24,8 +24,9 @@ Use this skill when the user wants to run the SwarmForge distributed demo from t
 3. If the user wants a real local model:
    - make sure Ollama is already installed
    - make sure Ollama is running on `http://127.0.0.1:11434`
-   - start the worker first so it can register with the controller
-   - then pull or switch the model from the dashboard, or use `ollama pull` separately
+   - if the controller is on another machine, set `CONTROLLER_URL=http://<controller-ip>:8010`
+   - set `PUBLIC_HOST=<this-node-ip>` so the controller can call the worker back
+   - do not use `127.0.0.1` for `CONTROLLER_URL` on a different machine
 4. For the fastest demo, start:
    - one controller on port `8010`
    - one mock coding worker on port `8021`
@@ -44,7 +45,7 @@ Use this skill when the user wants to run the SwarmForge distributed demo from t
 - Start mock research worker:
   `./.codex/skills/swarmforge-demo-runner/scripts/start_mock_worker.sh research`
 - Start Ollama worker:
-  `./.codex/skills/swarmforge-demo-runner/scripts/start_ollama_worker.sh worker-a "Worker-A" coding_worker "Coding Worker" qwen2.5:7b 8021`
+  `CONTROLLER_URL=http://31.97.191.47:8010 PUBLIC_HOST=<this-node-ip> ./.codex/skills/swarmforge-demo-runner/scripts/start_ollama_worker.sh my-node-1 "My Node" coding_worker "Coding Worker" qwen2.5:0.5b 8021`
 - Check local demo:
   `./.codex/skills/swarmforge-demo-runner/scripts/check_local_demo.sh`
 - Stop local demo:
@@ -78,22 +79,15 @@ ollama serve
 ```
 
 ```bash
-ollama pull qwen2.5:7b
+ollama pull qwen2.5:0.5b
 ```
 
 ```bash
-python3 -m swarmos_demo.worker \
-  --controller-url http://127.0.0.1:8010 \
-  --public-url http://127.0.0.1:8021 \
-  --host 127.0.0.1 \
-  --port 8021 \
-  --provider ollama \
-  --base-url http://127.0.0.1:11434/v1 \
-  --model qwen2.5:7b \
-  --worker-id worker-a \
-  --name Worker-A \
-  --role-key coding_worker \
-  --role-name "Coding Worker"
+CONTROLLER_URL=http://31.97.191.47:8010 \
+PUBLIC_HOST=<this-node-ip> \
+WORKER_BIND_HOST=0.0.0.0 \
+./.codex/skills/swarmforge-demo-runner/scripts/start_ollama_worker.sh \
+  my-node-1 "My Node" coding_worker "Coding Worker" qwen2.5:0.5b 8021
 ```
 
 ## Defaults
@@ -101,7 +95,8 @@ python3 -m swarmos_demo.worker \
 - repository root:
   `/Users/jacob/Documents/cursor/0.5b 模型的畅想`
 - controller:
-  `127.0.0.1:8010`
+  local dev: `127.0.0.1:8010`
+  remote demo server: `31.97.191.47:8010`
 - mock workers:
   `127.0.0.1:8021` and `127.0.0.1:8022`
 
@@ -111,3 +106,4 @@ python3 -m swarmos_demo.worker \
 - Use the Ollama script only when the machine already has Ollama running on `http://127.0.0.1:11434`.
 - If the user wants a presentation demo, start the controller and two mock workers, then verify the APIs and point them to the browser URL.
 - If the user wants a real-model demo, explain that "download model" and "worker online" are two different steps: Ollama hosts the model, while the SwarmForge worker keeps the node registered and available.
+- For cross-machine node onboarding, always remind the user that `127.0.0.1` means "this computer", not the remote controller.

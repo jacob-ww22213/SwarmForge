@@ -5,7 +5,7 @@ A runnable MVP for two related directions:
 - a stage-3 distributed controller + worker small-model network
 
 Version:
-- `0.6.1`
+- `0.6.2`
 - see `/VERSION` and `/CHANGELOG.md`
 
 What it demonstrates:
@@ -99,12 +99,17 @@ python3 -m swarmos_demo.worker \
   --port 8020 \
   --provider ollama \
   --base-url http://127.0.0.1:11434/v1 \
-  --model qwen2.5:7b \
+  --model qwen2.5:0.5b \
   --worker-id my-node-1 \
   --name "My Node" \
   --role-key coding_worker \
   --role-name "Coding Worker"
 ```
+
+Important:
+- if the controller is on another machine, do not use `127.0.0.1` as the controller URL
+- `127.0.0.1` on the user device only points back to that same device
+- the worker `public_url` must be reachable from the controller machine
 
 For local smoke tests without a real model server, use `--provider mock`:
 
@@ -112,7 +117,7 @@ For local smoke tests without a real model server, use `--provider mock`:
 python3 -m swarmos_demo.worker \
   --controller-url http://127.0.0.1:8010 \
   --public-url http://127.0.0.1:8021 \
-  --host 127.0.0.1 \
+  --host 0.0.0.0 \
   --port 8021 \
   --provider mock \
   --worker-id my-node-1 \

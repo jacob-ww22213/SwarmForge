@@ -81,7 +81,7 @@ python3 -m venv .venv
 - `PATCH`：修复、文档更新、小型体验改进
 
 当前版本：
-- `0.6.1`
+- `0.6.2`
 
 ## 一键启动与健康检查
 
@@ -178,23 +178,28 @@ ollama serve
 ```
 
 ```bash
-ollama pull qwen2.5:7b
+ollama pull qwen2.5:0.5b
 ```
 
 ```bash
 python3 -m swarmos_demo.worker \
-  --controller-url http://127.0.0.1:8010 \
-  --public-url http://127.0.0.1:8021 \
-  --host 127.0.0.1 \
+  --controller-url http://控制器IP:8010 \
+  --public-url http://当前机器IP:8021 \
+  --host 0.0.0.0 \
   --port 8021 \
   --provider ollama \
   --base-url http://127.0.0.1:11434/v1 \
-  --model qwen2.5:7b \
+  --model qwen2.5:0.5b \
   --worker-id my-node-1 \
   --name "我的节点" \
   --role-key coding_worker \
   --role-name "Coding Worker"
 ```
+
+注意：
+- 如果 controller 在另一台服务器上，不要把 `--controller-url` 写成 `127.0.0.1`
+- `127.0.0.1` 在用户电脑上只代表“这台用户自己的电脑”
+- `--public-url` 也必须是 controller 能访问到的当前节点 IP
 
 如果想保持在线状态更稳定，建议：
 - 用单独终端标签页运行 controller 和 worker
@@ -260,7 +265,7 @@ python3 -m swarmos_demo.worker \
   --port 8020 \
   --provider ollama \
   --base-url http://127.0.0.1:11434/v1 \
-  --model qwen2.5:7b \
+  --model qwen2.5:0.5b \
   --worker-id my-node-1 \
   --name "我的节点" \
   --role-key coding_worker \
@@ -273,7 +278,7 @@ python3 -m swarmos_demo.worker \
 python3 -m swarmos_demo.worker \
   --controller-url http://127.0.0.1:8010 \
   --public-url http://127.0.0.1:8021 \
-  --host 127.0.0.1 \
+  --host 0.0.0.0 \
   --port 8021 \
   --provider mock \
   --worker-id my-node-1 \

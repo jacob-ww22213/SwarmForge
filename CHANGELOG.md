@@ -7,7 +7,14 @@ This project follows a lightweight SemVer-style versioning scheme while the prod
 - `PATCH`: bug fixes, documentation fixes, test-only changes, or small UX improvements
 
 Current version:
-- `0.6.1`
+- `0.6.2`
+
+## [0.6.2] - 2026-03-30
+
+Changed:
+- fixed cross-machine node onboarding docs and scripts so remote users no longer default to `127.0.0.1` for the controller URL
+- updated the distributed web page to explain `CONTROLLER_IP` and `NODE_PUBLIC_IP` explicitly for remote workers
+- added environment-variable overrides to the bundled worker startup scripts for remote controller and node-public-address configuration
 
 ## [0.6.1] - 2026-03-29
 
