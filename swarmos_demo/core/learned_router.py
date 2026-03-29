@@ -19,14 +19,16 @@ from typing import Any
 
 logger = logging.getLogger(__name__)
 
-_DEFAULT_PATH = Path(__file__).resolve().parent.parent / "outputs" / ".learned_scores.json"
-_LEARNING_RATE = 0.20
-_BONUS_WEIGHT = 0.10
-_MAX_BONUS = 0.10
+from core.config import (
+    LEARNED_BONUS_WEIGHT as _BONUS_WEIGHT,
+    LEARNED_LEARNING_RATE as _LEARNING_RATE,
+    LEARNED_MAX_BONUS as _MAX_BONUS,
+    LEARNED_W_CONF as _W_CONF,
+    LEARNED_W_REC as _W_REC,
+    LEARNED_W_RISK as _W_RISK,
+)
 
-_W_CONF = 0.50
-_W_REC = 0.30
-_W_RISK = 0.20
+_DEFAULT_PATH = Path(__file__).resolve().parent.parent / "outputs" / ".learned_scores.json"
 
 
 def _proposal_signal(proposal: dict[str, Any]) -> float:

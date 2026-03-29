@@ -11,9 +11,11 @@ from __future__ import annotations
 
 from typing import Any
 
-_COST_PER_1K_PROMPT = 0.003
-_COST_PER_1K_COMPLETION = 0.006
-_CHARS_PER_TOKEN = 3.5
+from core.config import (
+    COST_CHARS_PER_TOKEN as _CHARS_PER_TOKEN,
+    COST_PER_1K_COMPLETION as _COST_PER_1K_COMPLETION,
+    COST_PER_1K_PROMPT as _COST_PER_1K_PROMPT,
+)
 
 
 def estimate_tokens(text: str) -> int:

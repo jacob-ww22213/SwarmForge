@@ -10,9 +10,10 @@ from __future__ import annotations
 
 from typing import Any
 
-
-_CONFIDENCE_SPREAD_THRESHOLD = 0.25
-_MIN_PROPOSALS_FOR_ANALYSIS = 2
+from core.config import (
+    CONFLICT_CONFIDENCE_SPREAD as _CONFIDENCE_SPREAD_THRESHOLD,
+    CONFLICT_MIN_PROPOSALS as _MIN_PROPOSALS_FOR_ANALYSIS,
+)
 
 
 def _normalize(text: str) -> set[str]:

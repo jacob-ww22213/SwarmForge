@@ -2,9 +2,17 @@ from __future__ import annotations
 
 import threading
 
-from core.cost import _COST_PER_1K_COMPLETION, _COST_PER_1K_PROMPT
+from core.config import (
+    COST_PER_1K_COMPLETION as _COST_PER_1K_COMPLETION,
+    COST_PER_1K_PROMPT as _COST_PER_1K_PROMPT,
+    ROUTER_BASE_SCORE,
+    ROUTER_DOMAIN_BOOST,
+    ROUTER_KEYWORD_BOOST,
+    ROUTER_PLANNER_BOOST,
+)
 from core.learned_router import learned_bonus, load_learned_scores
 from core.reputation import load_reputation, reputation_bonus
+from core.tfidf_router import tfidf_bonus
 from core.types import ExpertProfile, TaskProfile, clamp
 from experts.registry import EXPERTS
 
@@ -45,31 +53,38 @@ def reload_learned() -> None:
 
 def score_expert(expert: ExpertProfile, task: str, profile: TaskProfile) -> float:
     score = (
-        0.05
+        ROUTER_BASE_SCORE
         + expert.bias
         + reputation_bonus(_get_reputation_store(), expert.key)
         + learned_bonus(_get_learned_store(), expert.key)
+        + tfidf_bonus(EXPERTS, task, expert.key)
     )
     lowered = task.lower()
     for keyword in expert.keywords:
         if keyword.lower() in lowered or keyword in task:
-            score += 0.14
-    if expert.key == "systems_architect" and "systems" in profile["domains"]:
-        score += 0.22
-    if expert.key == "coding_engineer" and ("code" in profile["domains"] or profile["mentions_demo"]):
-        score += 0.20
-    if expert.key == "research_scientist" and "research" in profile["domains"]:
-        score += 0.20
-    if expert.key == "product_strategist" and ("business" in profile["domains"] or profile["mentions_demo"]):
-        score += 0.14
-    if expert.key == "math_optimizer" and ("math" in profile["domains"] or "evaluate" in profile["actions"]):
-        score += 0.12
-    if expert.key == "legal_risk" and "legal" in profile["domains"]:
-        score += 0.28
-    if expert.key == "medical_safety" and "medical" in profile["domains"]:
-        score += 0.28
+            score += ROUTER_KEYWORD_BOOST
+
+    domain_boost = ROUTER_DOMAIN_BOOST.get(expert.key)
+    if domain_boost is not None:
+        key = expert.key
+        if key == "systems_architect" and "systems" in profile["domains"]:
+            score += domain_boost
+        elif key == "coding_engineer" and ("code" in profile["domains"] or profile["mentions_demo"]):
+            score += domain_boost
+        elif key == "research_scientist" and "research" in profile["domains"]:
+            score += domain_boost
+        elif key == "product_strategist" and ("business" in profile["domains"] or profile["mentions_demo"]):
+            score += domain_boost
+        elif key == "math_optimizer" and ("math" in profile["domains"] or "evaluate" in profile["actions"]):
+            score += domain_boost
+        elif key == "legal_risk" and "legal" in profile["domains"]:
+            score += domain_boost
+        elif key == "medical_safety" and "medical" in profile["domains"]:
+            score += domain_boost
+
     if expert.key == "planner":
-        score += 0.18
+        score += ROUTER_PLANNER_BOOST
+
     return round(clamp(score, 0.0, 1.0), 3)
 
 

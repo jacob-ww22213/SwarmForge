@@ -41,11 +41,11 @@ from providers import build_provider
 from providers.base import BaseProvider
 from providers.mock import MockProvider
 
+from core.config import WORKFLOW_PROPOSE_TIMEOUT_S as _PROPOSE_TIMEOUT_S
+
 logger = logging.getLogger(__name__)
 
 _active_provider: BaseProvider | None = None
-
-_PROPOSE_TIMEOUT_S = 120
 
 
 def _get_provider() -> BaseProvider:
@@ -126,8 +126,12 @@ def _run_single(task: str, top_k: int = 3, with_baseline: bool = False) -> Workf
     if errors:
         trace["errors"] = errors
 
-    usage_map = context.get("_usage")
-    trace["cost"] = build_cost_summary(trace["proposals"], usage_map)
+    usage_map: dict[str, dict[str, int]] = {}
+    for p in proposals:
+        u = getattr(p, "_usage", None)
+        if u:
+            usage_map[p.expert_key] = u
+    trace["cost"] = build_cost_summary(trace["proposals"], usage_map or None)
 
     conflicts = detect_conflicts(trace["proposals"])
     if conflicts:

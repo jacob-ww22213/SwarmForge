@@ -4,7 +4,7 @@ A runnable MVP for the "many small experts + routing + collaboration" idea.
 
 What it demonstrates:
 - Task parsing and domain detection
-- Sparse expert routing with reputation scoring, learned scores, and budget constraints
+- Sparse expert routing with TF-IDF semantic matching, reputation scoring, learned scores, and budget constraints
 - Per-expert prompt templates, temperature, and token limits
 - Parallel expert proposals with fault tolerance
 - Automatic conflict detection between experts
@@ -107,6 +107,15 @@ python3 cli.py --provider openai-compatible --task "设计一个多专家协作�
 python3 cli.py --provider ollama --model qwen2.5:7b --task "用本地模型跑一个协作规划 demo"
 ```
 
+## Testing
+
+```bash
+python3 -m pytest tests/ -v
+```
+
+114 tests covering all A-line modules: types, task parser, router, TF-IDF,
+reputation, learned routing, cost, conflict, weighting, workflow, serve, CLI.
+
 ## Project structure
 
 ```text
@@ -118,9 +127,11 @@ swarmos_demo/
 ├── demo_types.py             # Re-export for backward compat
 │
 ├── core/                     # A-line: engine & orchestration
+│   ├── config.py             # Centralized constants & thresholds (V6)
 │   ├── types.py              # Shared types (TypedDict + dataclass)
 │   ├── task_parser.py        # Task analysis (language / domain / action / risk)
-│   ├── router.py             # Expert scoring & selection with reputation + learned scores
+│   ├── router.py             # Expert scoring & selection with reputation + learned + TF-IDF
+│   ├── tfidf_router.py       # TF-IDF cosine similarity routing, pure stdlib (V6)
 │   ├── learned_router.py     # Trace-based learned routing scores (V4)
 │   ├── workflow.py           # Main orchestration with fault tolerance (V4)
 │   ├── storage.py            # Trace / markdown persistence
@@ -144,6 +155,20 @@ swarmos_demo/
 ├── reporting/                # B-line: output formatting
 │   ├── console.py            # Terminal report
 │   └── markdown.py           # Markdown report with comparison table
+│
+├── tests/                    # pytest test suite (V6, 114 cases)
+│   ├── conftest.py           # Shared fixtures
+│   ├── test_types.py
+│   ├── test_task_parser.py
+│   ├── test_router.py
+│   ├── test_tfidf.py
+│   ├── test_workflow.py
+│   ├── test_providers.py
+│   ├── test_cost_conflict_weight.py
+│   ├── test_reputation_learned.py
+│   ├── test_serve.py
+│   ├── test_experts_registry.py
+│   └── test_cli.py
 │
 ├── examples/                 # Sample task files
 │   ├── task_01.txt

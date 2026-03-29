@@ -26,9 +26,9 @@ from providers.base import BaseProvider
 from reporting.console import render_console_report
 from reporting.markdown import render_markdown_report
 
-logger = logging.getLogger(__name__)
+from core.config import WORKFLOW_PROPOSE_TIMEOUT_S as _PROPOSE_TIMEOUT_S
 
-_PROPOSE_TIMEOUT_S = 120
+logger = logging.getLogger(__name__)
 
 
 def _build_trace_meta() -> dict[str, str]:

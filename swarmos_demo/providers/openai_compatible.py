@@ -19,11 +19,13 @@ from core.types import (
 )
 from providers.base import BaseProvider, ProviderError
 
-logger = logging.getLogger(__name__)
+from core.config import (
+    PROVIDER_BASE_BACKOFF_S as _BASE_BACKOFF_S,
+    PROVIDER_MAX_RETRIES as _MAX_RETRIES,
+    PROVIDER_REQUEST_TIMEOUT_S as _REQUEST_TIMEOUT_S,
+)
 
-_MAX_RETRIES = 3
-_BASE_BACKOFF_S = 1.0
-_REQUEST_TIMEOUT_S = 60
+logger = logging.getLogger(__name__)
 
 
 def _is_retryable(exc: Exception) -> bool:
