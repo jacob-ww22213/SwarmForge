@@ -6,6 +6,10 @@ The repository now includes two complementary modes:
 - an offline orchestration demo for routing, critique, aggregation, and baseline comparison
 - a controller + worker distributed MVP where multiple machines register online, receive tasks, run local models, and report results back
 
+The distributed console now serves two roles on one page:
+- project-side operator: publish tasks, inspect the network, and review aggregate results
+- user-side node owner: download small models, start and keep a worker online, and submit tasks from the user perspective
+
 Language:
 - [中文说明](./README.zh-CN.md)
 - [English Guide](./README.en.md)
@@ -75,6 +79,12 @@ The distributed path is:
 6. submit a task from the browser
 7. let the controller run MoE routing and two-round MoA collaboration
 8. inspect per-worker output, aggregate output, latency, and ratings
+
+Current front-end responsibilities:
+- project-side view:
+  publish platform tasks and inspect global worker state
+- user-side view:
+  learn how to bring a node online, download a model, keep heartbeats alive, and run user tasks
 
 Important:
 - the model is served by Ollama

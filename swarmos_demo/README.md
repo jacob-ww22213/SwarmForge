@@ -127,9 +127,16 @@ The distributed UI lets you:
 - view online and offline worker nodes
 - trigger Ollama model downloads on a worker
 - switch the active model on a worker
+- switch between project-side and user-side task entry
 - route the task to a proposal top-k and a review top-k
 - inspect per-worker proposals and aggregate output
 - rate the final result from 1 to 5
+
+The distributed page is now a dual-role console:
+- project-side operator:
+  inspect the full network and publish platform tasks
+- user-side node owner:
+  learn how to bring a node online, download a model, keep heartbeats alive, and run user tasks
 
 Run with a task file:
 

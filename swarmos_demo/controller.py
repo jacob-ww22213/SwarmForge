@@ -111,6 +111,7 @@ def _list_task_records(limit: int = 50) -> list[dict[str, Any]]:
             {
                 "task_id": record.get("task_id", path.stem),
                 "created_at": record.get("created_at"),
+                "requester_role": record.get("requester_role", "project"),
                 "task_preview": record.get("task", "")[:100],
                 "online_worker_count": record.get("metrics", {}).get("online_worker_count", 0),
                 "completed_worker_count": record.get("metrics", {}).get("completed_worker_count", 0),
@@ -207,7 +208,12 @@ def _run_worker_group(
     return results
 
 
-def _run_distributed_task(task: str, top_k: int | None = None, review_top_k: int | None = None) -> dict[str, Any]:
+def _run_distributed_task(
+    task: str,
+    top_k: int | None = None,
+    review_top_k: int | None = None,
+    requester_role: str = "project",
+) -> dict[str, Any]:
     task_id = utc_timestamp_id("task")
     created_at = utc_now_iso()
     workers = STATE.online_workers()
@@ -274,6 +280,7 @@ def _run_distributed_task(task: str, top_k: int | None = None, review_top_k: int
         "task_id": task_id,
         "created_at": created_at,
         "task": task,
+        "requester_role": requester_role,
         "profile": proposal_routing["profile"],
         "dispatch_policy": "moe-top-k + moa-two-round",
         "routing": {
@@ -382,6 +389,7 @@ class ControllerHandler(SimpleHTTPRequestHandler):
 
         if path == "/api/tasks/run":
             task = str(body.get("task", "")).strip()
+            requester_role = str(body.get("requester_role", "project")).strip() or "project"
             if not task:
                 return self._json_response({"error": "task is required"}, 400)
             top_k_raw = body.get("top_k", 3)
@@ -392,7 +400,12 @@ class ControllerHandler(SimpleHTTPRequestHandler):
             except (TypeError, ValueError):
                 return self._json_response({"error": "top_k and review_top_k must be integers"}, 400)
             try:
-                record = _run_distributed_task(task, top_k=top_k, review_top_k=review_top_k)
+                record = _run_distributed_task(
+                    task,
+                    top_k=top_k,
+                    review_top_k=review_top_k,
+                    requester_role=requester_role,
+                )
             except ValueError as exc:
                 return self._json_response({"error": str(exc)}, 400)
             return self._json_response(record)

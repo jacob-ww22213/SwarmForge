@@ -7,6 +7,12 @@ SwarmForge now includes two complementary tracks:
 
 The distributed mode is the closer match to the target product: a controller tracks online worker nodes, each worker runs a local model, the browser sends a task to the controller, and the controller dispatches that task to all online small-model nodes before aggregating results, latency, and user satisfaction.
 
+The distributed front-end now serves two roles:
+- project-side operator
+- user-side node owner
+
+Both roles can submit tasks and inspect results from the same page, while the user-side view also explains model download, worker startup, and how to keep a node online.
+
 ## What This Project Demonstrates
 
 - multi-expert AI workflow orchestration
@@ -230,9 +236,29 @@ The distributed dashboard supports:
 - online/offline worker visibility
 - Ollama model download per worker
 - model switching per worker
+- both project-side and user-side task submission
 - MoE top-k routing for proposal workers and MoA second-round review workers
 - per-worker results, latency, and aggregated output
 - 1 to 5 user satisfaction ratings
+
+### 3.2 Full front-end logic
+
+1. Project-side view
+- publish platform tasks
+- inspect global worker state
+- review routing, collaboration output, aggregate output, latency, and rating
+
+2. User-side view
+- understand how to download a local small model
+- understand how to start a worker node
+- understand how to keep the node online
+- submit user tasks and inspect results
+
+3. User node onboarding section
+- explains the difference between `Ollama` and the SwarmForge `worker`
+- includes recommended model buttons
+- includes the skill prompt
+- includes example commands for keeping a node online
 
 ### 3.1 Actual operator run order
 

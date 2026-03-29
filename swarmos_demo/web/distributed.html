@@ -3,159 +3,160 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>SwarmOS Distributed Controller</title>
+    <title>SwarmForge Distributed Console</title>
     <style>
       :root {
-        --bg: #f4efe7;
-        --panel: rgba(255, 252, 246, 0.88);
-        --line: rgba(79, 54, 34, 0.16);
-        --text: #231a15;
-        --muted: #6f5d52;
-        --accent: #a24a1d;
-        --good: #2a7b57;
-        --warn: #b8692e;
-        --bad: #b63e34;
+        --bg: #f6efe6;
+        --panel: rgba(255, 252, 247, 0.9);
+        --line: rgba(76, 54, 34, 0.16);
+        --text: #231913;
+        --muted: #715f54;
+        --accent: #a34c1d;
+        --accent-2: #d38f64;
+        --good: #28734d;
+        --bad: #b1463b;
+        --role: #3a5f91;
       }
       * { box-sizing: border-box; }
       body {
         margin: 0;
-        font-family: "SF Pro Text", "PingFang SC", "Noto Sans SC", sans-serif;
         color: var(--text);
+        font-family: "SF Pro Text", "PingFang SC", "Noto Sans SC", sans-serif;
         background:
-          radial-gradient(circle at top left, rgba(210, 160, 117, 0.28), transparent 28%),
+          radial-gradient(circle at top left, rgba(214, 170, 132, 0.28), transparent 28%),
           linear-gradient(180deg, #fcf8f2, var(--bg));
       }
       .page {
-        width: min(1380px, calc(100vw - 32px));
+        width: min(1440px, calc(100vw - 32px));
         margin: 0 auto;
         padding: 24px 0 40px;
       }
       .hero, .panel {
         border: 1px solid var(--line);
-        border-radius: 24px;
+        border-radius: 26px;
         background: var(--panel);
-        box-shadow: 0 16px 40px rgba(60, 40, 20, 0.08);
+        box-shadow: 0 18px 48px rgba(56, 39, 23, 0.08);
       }
-      .hero {
-        padding: 28px;
-        display: grid;
-        gap: 12px;
-      }
+      .hero { padding: 28px; display: grid; gap: 16px; }
+      .eyebrow, .meta { color: var(--muted); font-size: 12px; }
       .hero-grid {
         display: grid;
-        grid-template-columns: 1.3fr 0.7fr;
-        gap: 16px;
+        grid-template-columns: 1.25fr 0.75fr;
+        gap: 18px;
         align-items: start;
       }
-      .hero-side {
+      h1 { margin: 0; font-size: 44px; line-height: 1.02; letter-spacing: -0.04em; }
+      h2, h3, h4 { margin: 0; }
+      p { margin: 0; color: var(--muted); line-height: 1.7; }
+      .panel { padding: 20px; }
+      .layout {
         display: grid;
-        gap: 12px;
+        grid-template-columns: 420px minmax(0, 1fr);
+        gap: 18px;
+        margin-top: 18px;
       }
+      .left, .right { display: grid; gap: 18px; align-self: start; }
       .flow {
         display: grid;
         grid-template-columns: repeat(4, minmax(0, 1fr));
         gap: 10px;
-        margin-top: 8px;
       }
-      .flow-card {
+      .flow-card, .stat, .worker-card, .task-card, .result-card, .guide-card {
         border: 1px solid var(--line);
         border-radius: 18px;
-        padding: 12px;
-        background: rgba(255,255,255,0.6);
+        padding: 14px;
+        background: rgba(255,255,255,0.72);
       }
-      .flow-card strong {
+      .flow-card strong, .guide-card strong {
         display: block;
         font-size: 14px;
       }
-      .flow-card span {
+      .flow-card span, .guide-card span {
         display: block;
         margin-top: 6px;
         color: var(--muted);
         font-size: 13px;
         line-height: 1.5;
       }
-      .demo-box {
+      .role-switch {
+        display: inline-flex;
+        gap: 8px;
+        flex-wrap: wrap;
+        padding: 6px;
         border: 1px solid var(--line);
-        border-radius: 18px;
-        padding: 14px;
+        border-radius: 999px;
         background: rgba(255,255,255,0.74);
       }
-      .demo-box h3 {
-        margin: 0 0 8px;
+      .role-button {
+        border: none;
+        border-radius: 999px;
+        padding: 10px 14px;
+        background: transparent;
+        color: var(--text);
+        font-weight: 700;
+        cursor: pointer;
       }
-      .pill-row {
+      .role-button.active {
+        background: linear-gradient(135deg, var(--role), #223f6d);
+        color: white;
+      }
+      .pill-row, .actions, .rating-row {
         display: flex;
         gap: 8px;
         flex-wrap: wrap;
       }
-      .pill {
-        border: 1px solid var(--line);
-        border-radius: 999px;
-        background: white;
-        color: var(--text);
-        padding: 8px 12px;
-        cursor: pointer;
-        font-size: 13px;
-        font-weight: 600;
-      }
-      .hero h1 { margin: 0; font-size: 42px; line-height: 1.02; letter-spacing: -0.04em; }
-      .hero p { margin: 0; color: var(--muted); line-height: 1.7; }
-      .layout {
-        display: grid;
-        grid-template-columns: 360px minmax(0, 1fr);
-        gap: 18px;
-        margin-top: 18px;
-      }
-      .left, .right { display: grid; gap: 18px; align-self: start; }
-      .panel { padding: 20px; }
-      .panel h2, .panel h3 { margin: 0; }
-      .panel p { color: var(--muted); }
-      .field { margin-top: 14px; }
-      label { display: block; margin-bottom: 6px; font-size: 14px; font-weight: 600; }
-      input, textarea, select, button {
-        font: inherit;
-      }
-      input, textarea {
-        width: 100%;
-        border: 1px solid var(--line);
-        border-radius: 14px;
-        padding: 10px 12px;
-        background: #fffdfa;
-      }
-      textarea { min-height: 160px; resize: vertical; }
-      button {
+      .pill, button {
         border: none;
         border-radius: 999px;
-        background: linear-gradient(135deg, var(--accent), #6f2808);
-        color: white;
-        padding: 10px 16px;
-        font-weight: 700;
+        padding: 10px 14px;
         cursor: pointer;
+        font: inherit;
+        font-weight: 700;
+      }
+      .pill {
+        border: 1px solid var(--line);
+        background: white;
+        color: var(--text);
+        font-size: 13px;
+      }
+      button {
+        background: linear-gradient(135deg, var(--accent), #6b2d10);
+        color: white;
       }
       button.secondary {
         background: #f1e7dd;
         color: var(--text);
         border: 1px solid var(--line);
       }
-      .actions { display: flex; gap: 10px; margin-top: 16px; flex-wrap: wrap; }
-      .grid {
+      label {
+        display: block;
+        margin-bottom: 6px;
+        font-size: 14px;
+        font-weight: 700;
+      }
+      input, textarea, select {
+        width: 100%;
+        border: 1px solid var(--line);
+        border-radius: 14px;
+        padding: 10px 12px;
+        background: #fffdfa;
+        font: inherit;
+      }
+      textarea { min-height: 152px; resize: vertical; }
+      .field { margin-top: 14px; }
+      .field-grid-2 {
         display: grid;
-        gap: 12px;
+        grid-template-columns: 1fr 1fr;
+        gap: 10px;
       }
       .stats {
         display: grid;
         grid-template-columns: repeat(4, minmax(0, 1fr));
         gap: 12px;
       }
-      .stat, .worker-card, .task-card, .result-card {
-        border: 1px solid var(--line);
-        border-radius: 18px;
-        padding: 14px;
-        background: rgba(255,255,255,0.66);
-      }
-      .stat .label, .meta { color: var(--muted); font-size: 12px; }
+      .stat .label { color: var(--muted); font-size: 12px; }
       .stat strong { display: block; margin-top: 8px; font-size: 28px; }
-      .worker-list, .task-list { display: grid; gap: 12px; }
+      .worker-list, .task-list, .grid { display: grid; gap: 12px; }
       .chip {
         display: inline-block;
         padding: 4px 10px;
@@ -163,11 +164,28 @@
         font-size: 12px;
         font-weight: 700;
       }
-      .chip.online { background: rgba(42,123,87,0.12); color: var(--good); }
-      .chip.offline { background: rgba(182,62,52,0.12); color: var(--bad); }
-      .worker-card h4, .task-card h4 { margin: 0 0 8px; }
-      .worker-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 10px; }
-      .inline { display: grid; grid-template-columns: 1fr auto auto; gap: 8px; margin-top: 8px; }
+      .chip.online { background: rgba(40,115,77,0.12); color: var(--good); }
+      .chip.offline { background: rgba(177,70,59,0.12); color: var(--bad); }
+      .chip.role-project { background: rgba(58,95,145,0.12); color: var(--role); }
+      .chip.role-user { background: rgba(163,76,29,0.12); color: var(--accent); }
+      .inline { display: grid; grid-template-columns: 1fr auto auto; gap: 8px; margin-top: 10px; }
+      .guide-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 10px;
+      }
+      .code-block {
+        margin-top: 10px;
+        padding: 12px;
+        border-radius: 14px;
+        border: 1px solid var(--line);
+        background: rgba(38, 28, 22, 0.95);
+        color: #f8f2eb;
+        white-space: pre-wrap;
+        word-break: break-word;
+        font-size: 13px;
+        line-height: 1.6;
+      }
       pre {
         white-space: pre-wrap;
         word-break: break-word;
@@ -175,68 +193,52 @@
         color: var(--text);
       }
       ul { margin: 8px 0 0; padding-left: 18px; }
-      .rating-row { display: flex; gap: 8px; margin-top: 12px; flex-wrap: wrap; }
-      .rating-row button { padding: 8px 12px; }
-      .muted { color: var(--muted); }
-      @media (max-width: 980px) {
-        .hero-grid,
-        .layout {
-          grid-template-columns: 1fr;
-        }
-        .flow {
-          grid-template-columns: 1fr 1fr;
-        }
+      .task-card { cursor: pointer; }
+      .hidden { display: none !important; }
+      @media (max-width: 1100px) {
+        .hero-grid, .layout { grid-template-columns: 1fr; }
       }
-      @media (max-width: 640px) {
-        .flow,
-        .stats {
-          grid-template-columns: 1fr;
-        }
-        .inline {
-          grid-template-columns: 1fr;
-        }
+      @media (max-width: 760px) {
+        .flow, .stats, .field-grid-2, .guide-grid { grid-template-columns: 1fr; }
+        .inline { grid-template-columns: 1fr; }
       }
     </style>
   </head>
   <body>
     <div class="page">
       <section class="hero">
-        <div class="meta">SwarmOS Distributed Controller</div>
+        <div class="eyebrow">SwarmForge Distributed Console</div>
         <div class="hero-grid">
-          <div>
-            <h1>多机小模型网络控制台</h1>
-            <p>这是一个可展示的多机 AI 协作 Demo。controller 维护在线节点，按任务做 MoE 稀疏路由，再执行两轮 MoA 协作，把每个节点的输出、耗时、评分和最终聚合结果直接展示出来。</p>
+          <div style="display:grid;gap:14px;">
+            <h1>项目方与用户共用的多机小模型控制台</h1>
+            <p>这个页面同时服务两个角色。项目方可以发布任务、检查系统状态和聚合结果；用户可以下载小模型、启动本地节点、保持在线，并从自己的视角发任务和检查结果。</p>
             <div class="flow">
               <div class="flow-card">
-                <strong>1. 节点上线</strong>
-                <span>worker 心跳注册模型、角色和地址</span>
+                <strong>1. 用户上线节点</strong>
+                <span>启动 Ollama 与 worker，持续 heartbeat 到 controller。</span>
               </div>
               <div class="flow-card">
-                <strong>2. MoE 路由</strong>
-                <span>controller 选出第一轮 proposal workers</span>
+                <strong>2. 下载小模型</strong>
+                <span>在页面里输入模型名，直接下载或切换到当前节点。</span>
               </div>
               <div class="flow-card">
-                <strong>3. MoA 复审</strong>
-                <span>第二轮 review workers 基于上一轮结果继续精炼</span>
+                <strong>3. 双角色发任务</strong>
+                <span>项目方和用户都可以在页面提交任务并查看执行结果。</span>
               </div>
               <div class="flow-card">
-                <strong>4. 结果评测</strong>
-                <span>展示耗时、完成率、风险、满意度和历史记录</span>
+                <strong>4. 检查协作结果</strong>
+                <span>查看 MoE 路由、两轮 MoA 结果、耗时、评分与历史记录。</span>
               </div>
             </div>
           </div>
-          <div class="hero-side">
-            <div class="demo-box">
-              <h3>演示建议</h3>
-              <p>先启动 2 到 3 个 worker，再点击下面的样例任务按钮，把任务填入输入框后直接运行。</p>
+          <div style="display:grid;gap:12px;">
+            <div class="guide-card">
+              <strong>当前系统逻辑</strong>
+              <span>controller 负责调度和展示，worker 负责把本地模型接入成在线节点。只有 Ollama 和 worker 都在运行时，这个节点才真正可用。</span>
             </div>
-            <div class="demo-box">
-              <h3>样例任务</h3>
-              <div class="pill-row">
-                <button class="pill" type="button" data-task="请对一个新的支付功能做多机多模型评审，给出上线前最重要的代码修改、风险和验证项。">支付功能评审</button>
-                <button class="pill" type="button" data-task="请为一个分布式小模型平台做 MVP 技术方案评审，给出系统拆分、核心风险和优先级。">平台架构评审</button>
-                <button class="pill" type="button" data-task="请对一个 AI 代码审查系统做路由与评测设计，输出实验方案、基线和失败边界。">评测设计</button>
-              </div>
+            <div class="guide-card">
+              <strong>快速演示</strong>
+              <span>先启动 controller，再启动 2 个 mock 或 Ollama worker。然后切换到不同角色页签，分别发任务检查输出。</span>
             </div>
           </div>
         </div>
@@ -245,13 +247,38 @@
       <div class="layout">
         <div class="left">
           <section class="panel">
-            <h2>发起任务</h2>
-            <p>输入任务后，controller 会先做 MoE 稀疏路由选出第一轮 proposal workers，再选出第二轮 review workers 做精炼。</p>
+            <h2>角色入口</h2>
+            <p>你可以切换项目方视角和用户视角。两个角色都能提交任务和查看结果。</p>
+            <div class="field">
+              <div class="role-switch">
+                <button class="role-button active" id="role-project" type="button">项目方视角</button>
+                <button class="role-button" id="role-user" type="button">用户视角</button>
+              </div>
+            </div>
+            <div class="field">
+              <div id="role-help" class="guide-card">
+                <strong>项目方视角</strong>
+                <span>适合做平台任务发布、系统状态检查、节点利用率观察和结果验收。</span>
+              </div>
+            </div>
+          </section>
+
+          <section class="panel">
+            <h2>任务发起</h2>
+            <p>当前选中角色会作为任务来源写入历史记录。任务提交后，controller 会执行 MoE 路由和两轮 MoA 协作。</p>
             <div class="field">
               <label for="task-input">任务描述</label>
-              <textarea id="task-input" placeholder="例如：请对这个新功能 PR 做多专家评审，并给出最重要的 5 条修改建议。"></textarea>
+              <textarea id="task-input" placeholder="例如：请对一个新的支付功能做多机多模型评审，给出上线前最重要的代码修改、风险和验证项。"></textarea>
             </div>
-            <div class="field" style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+            <div class="field">
+              <div class="pill-row">
+                <button class="pill" type="button" data-role="project" data-task="请从项目方角度，对一个新的支付功能做多机多模型评审，给出上线前最重要的代码修改、风险和验证项。">项目方示例</button>
+                <button class="pill" type="button" data-role="project" data-task="请从平台运营视角，评估当前分布式小模型网络的稳定性、调度风险和下一步优化方向。">平台运营评估</button>
+                <button class="pill" type="button" data-role="user" data-task="请从用户节点提供者视角，评估我下载并接入一个本地模型后，最适合承接什么类型的任务。">用户节点评估</button>
+                <button class="pill" type="button" data-role="user" data-task="请从用户视角，评估当前本地小模型节点对代码审查任务的可用性、局限和改进建议。">用户任务评估</button>
+              </div>
+            </div>
+            <div class="field field-grid-2">
               <div>
                 <label for="proposal-top-k">MoE 第一轮 Top-K</label>
                 <input id="proposal-top-k" type="number" min="1" value="3">
@@ -261,11 +288,60 @@
                 <input id="review-top-k" type="number" min="1" value="2">
               </div>
             </div>
-            <div class="actions">
-              <button id="run-button">执行 MoE + MoA</button>
-              <button class="secondary" id="refresh-button">刷新状态</button>
+            <div class="actions" style="margin-top:16px;">
+              <button id="run-button" type="button">提交任务</button>
+              <button id="refresh-button" class="secondary" type="button">刷新状态</button>
             </div>
-            <p id="run-status" class="muted">等待任务</p>
+            <p id="run-status" class="meta" style="margin-top:12px;">等待任务</p>
+          </section>
+
+          <section class="panel">
+            <h2>用户节点接入</h2>
+            <p>这是面向用户的“小模型下载与保持在线”入口说明。下载模型不等于节点在线，必须同时运行 Ollama 和 worker。</p>
+            <div class="guide-grid" style="margin-top:12px;">
+              <div class="guide-card">
+                <strong>步骤 A</strong>
+                <span>先在节点机器上启动 `ollama serve`，让本地模型服务保持可访问。</span>
+              </div>
+              <div class="guide-card">
+                <strong>步骤 B</strong>
+                <span>再启动 `swarmos_demo.worker`，把这台机器注册成在线节点。</span>
+              </div>
+              <div class="guide-card">
+                <strong>步骤 C</strong>
+                <span>在右侧节点卡片里输入模型名并点击“下载模型”或“切换模型”。</span>
+              </div>
+              <div class="guide-card">
+                <strong>步骤 D</strong>
+                <span>保持 Ollama 和 worker 不退出，页面状态持续显示 `ONLINE`。</span>
+              </div>
+            </div>
+            <div class="field">
+              <label for="quick-model">推荐模型</label>
+              <div class="pill-row">
+                <button class="pill" type="button" data-model="qwen2.5:7b">qwen2.5:7b</button>
+                <button class="pill" type="button" data-model="llama3.1:8b">llama3.1:8b</button>
+                <button class="pill" type="button" data-model="deepseek-r1:7b">deepseek-r1:7b</button>
+              </div>
+            </div>
+            <div class="field">
+              <label for="quick-model">Skill / 启动文档</label>
+              <div class="code-block">使用 swarmforge-demo-runner 下载并启动本地小模型节点</div>
+              <div class="code-block">ollama serve
+ollama pull qwen2.5:7b
+python3 -m swarmos_demo.worker \
+  --controller-url http://127.0.0.1:8010 \
+  --public-url http://127.0.0.1:8021 \
+  --host 127.0.0.1 \
+  --port 8021 \
+  --provider ollama \
+  --base-url http://127.0.0.1:11434/v1 \
+  --model qwen2.5:7b \
+  --worker-id worker-a \
+  --name Worker-A \
+  --role-key coding_worker \
+  --role-name "Coding Worker"</div>
+            </div>
           </section>
 
           <section class="panel">
@@ -276,22 +352,27 @@
 
         <div class="right">
           <section class="panel">
-            <h2>节点状态</h2>
-            <div id="stats" class="stats"></div>
-            <div id="worker-list" class="worker-list" style="margin-top: 14px;"></div>
+            <h2>节点状态与模型入口</h2>
+            <p>用户可以在这里为自己的节点下载模型、切换模型，并通过 `ONLINE` 状态确认节点还在持续 heartbeat。</p>
+            <div id="stats" class="stats" style="margin-top:14px;"></div>
+            <div id="worker-list" class="worker-list" style="margin-top:14px;"></div>
           </section>
 
           <section class="panel">
             <h2>任务结果</h2>
-            <div id="result-empty" class="muted">还没有运行结果。</div>
-            <div id="result-view" class="grid" style="display:none;"></div>
+            <div id="result-empty" class="meta">还没有运行结果。</div>
+            <div id="result-view" class="grid hidden"></div>
           </section>
         </div>
       </div>
     </div>
 
     <script>
-      const state = { workers: [], tasks: [], currentTask: null };
+      const state = { workers: [], tasks: [], currentTask: null, activeRole: "project" };
+      const roleLabels = {
+        project: { title: "项目方视角", text: "适合做平台任务发布、系统状态检查、节点利用率观察和结果验收。" },
+        user: { title: "用户视角", text: "适合做节点接入、模型下载、在线验证，以及从用户角度发任务和检查结果。" },
+      };
 
       async function fetchJson(url, options = {}) {
         const response = await fetch(url, options);
@@ -316,6 +397,18 @@
         return date.toLocaleString("zh-CN", { hour12: false });
       }
 
+      function setActiveRole(role) {
+        state.activeRole = role;
+        document.querySelector("#role-project").classList.toggle("active", role === "project");
+        document.querySelector("#role-user").classList.toggle("active", role === "user");
+        const meta = roleLabels[role];
+        document.querySelector("#role-help").innerHTML = `
+          <strong>${escapeHtml(meta.title)}</strong>
+          <span>${escapeHtml(meta.text)}</span>
+        `;
+        document.querySelector("#run-status").textContent = `${meta.title} 已激活，可以提交任务`;
+      }
+
       function renderStats(status) {
         const cards = [
           { label: "在线节点", value: status.online_workers || 0 },
@@ -334,7 +427,7 @@
       function renderWorkers() {
         const workerList = document.querySelector("#worker-list");
         if (!state.workers.length) {
-          workerList.innerHTML = `<div class="muted">还没有 worker 上线。先在节点机器上启动 worker。</div>`;
+          workerList.innerHTML = `<div class="meta">还没有 worker 上线。先在节点机器上启动 Ollama 和 worker。</div>`;
           return;
         }
         workerList.innerHTML = state.workers.map((worker) => `
@@ -353,6 +446,7 @@
               <button onclick="pullModel('${escapeHtml(worker.worker_id)}')">下载模型</button>
               <button class="secondary" onclick="activateModel('${escapeHtml(worker.worker_id)}')">切换模型</button>
             </div>
+            <div class="meta" style="margin-top:10px;">判断节点是否真的可用：Ollama 在线 + 目标模型可用 + worker 持续 heartbeat。</div>
           </article>
         `).join("");
       }
@@ -360,12 +454,15 @@
       function renderTasks() {
         const taskList = document.querySelector("#task-list");
         if (!state.tasks.length) {
-          taskList.innerHTML = `<div class="muted">还没有历史任务。</div>`;
+          taskList.innerHTML = `<div class="meta">还没有历史任务。</div>`;
           return;
         }
         taskList.innerHTML = state.tasks.map((task) => `
           <article class="task-card" onclick="loadTask('${escapeHtml(task.task_id)}')">
-            <h4>${escapeHtml(task.task_id)}</h4>
+            <div style="display:flex;justify-content:space-between;gap:12px;align-items:flex-start;">
+              <h4>${escapeHtml(task.task_id)}</h4>
+              <span class="chip ${task.requester_role === "user" ? "role-user" : "role-project"}">${task.requester_role === "user" ? "用户" : "项目方"}</span>
+            </div>
             <div class="meta">${escapeHtml(formatTime(task.created_at))}</div>
             <div class="meta">完成 ${escapeHtml(task.completed_worker_count || 0)} / ${escapeHtml(task.online_worker_count || 0)} 个 worker</div>
             <p>${escapeHtml(task.task_preview || "")}</p>
@@ -375,13 +472,13 @@
 
       function renderTaskDetail(task) {
         state.currentTask = task;
-        document.querySelector("#result-empty").style.display = "none";
+        document.querySelector("#result-empty").classList.add("hidden");
         const container = document.querySelector("#result-view");
-        container.style.display = "grid";
+        container.classList.remove("hidden");
 
         const workerCards = (task.worker_results || []).map((item) => `
           <article class="result-card">
-            <div style="display:flex;justify-content:space-between;gap:12px;">
+            <div style="display:flex;justify-content:space-between;gap:12px;align-items:flex-start;">
               <div>
                 <strong>${escapeHtml(item.worker?.name || item.worker_name || item.worker_id || "-")}</strong>
                 <div class="meta">${escapeHtml(item.worker?.role_name || "-")} · ${escapeHtml(item.worker?.model || item.model || "-")}</div>
@@ -390,31 +487,36 @@
               <div class="meta">${escapeHtml(item.latency_ms || 0)} ms</div>
             </div>
             ${item.status === "ok" ? `
-              <p>${escapeHtml(item.proposal.summary || "")}</p>
+              <p style="margin-top:10px;">${escapeHtml(item.proposal.summary || "")}</p>
               <strong>Recommendations</strong>
               <ul>${(item.proposal.recommendations || []).map((x) => `<li>${escapeHtml(x)}</li>`).join("")}</ul>
               <strong>Risks</strong>
               <ul>${(item.proposal.risks || []).map((x) => `<li>${escapeHtml(x)}</li>`).join("")}</ul>
-            ` : `
-              <p class="muted">调用失败：${escapeHtml(item.error || "unknown error")}</p>
-            `}
+            ` : `<p class="meta">调用失败：${escapeHtml(item.error || "unknown error")}</p>`}
           </article>
         `).join("");
 
         const routingCards = `
           <article class="result-card">
             <h3>MoE / MoA 路由</h3>
-            <strong>Round 1 Proposal Workers</strong>
+            <div class="meta" style="margin-top:6px;">任务来源：${escapeHtml(task.requester_role === "user" ? "用户" : "项目方")}</div>
+            <strong style="display:block;margin-top:10px;">Round 1 Proposal Workers</strong>
             <ul>${(task.routing?.proposal || []).map((item) => `<li>${escapeHtml(item.name || item.worker_id)} (${escapeHtml(item.template_key || "-")}) score=${escapeHtml(item.score || 0)}${item.reasons ? ` · ${escapeHtml(item.reasons.join(" | "))}` : ""}</li>`).join("")}</ul>
-            <strong>Round 2 Review Workers</strong>
+            <strong style="display:block;margin-top:10px;">Round 2 Review Workers</strong>
             <ul>${(task.routing?.review || []).map((item) => `<li>${escapeHtml(item.name || item.worker_id)} (${escapeHtml(item.template_key || "-")}) score=${escapeHtml(item.score || 0)}${item.reasons ? ` · ${escapeHtml(item.reasons.join(" | "))}` : ""}</li>`).join("")}</ul>
           </article>
         `;
 
         container.innerHTML = `
           <article class="result-card">
-            <h3>聚合结果</h3>
-            <p>${escapeHtml(task.aggregate?.final_summary || "")}</p>
+            <div style="display:flex;justify-content:space-between;gap:12px;align-items:flex-start;">
+              <div>
+                <h3>聚合结果</h3>
+                <div class="meta">任务来源：${escapeHtml(task.requester_role === "user" ? "用户" : "项目方")}</div>
+              </div>
+              <span class="chip ${task.requester_role === "user" ? "role-user" : "role-project"}">${task.requester_role === "user" ? "用户任务" : "项目方任务"}</span>
+            </div>
+            <p style="margin-top:10px;">${escapeHtml(task.aggregate?.final_summary || "")}</p>
             <strong>Top Recommendations</strong>
             <ul>${(task.aggregate?.top_recommendations || []).map((x) => `<li>${escapeHtml(x)}</li>`).join("")}</ul>
             <strong>Top Risks</strong>
@@ -424,7 +526,7 @@
           <article class="result-card">
             <h3>指标</h3>
             <pre>${escapeHtml(JSON.stringify(task.metrics || {}, null, 2))}</pre>
-            <div class="rating-row">
+            <div class="rating-row" style="margin-top:12px;">
               <button onclick="rateTask(1)">1 分</button>
               <button onclick="rateTask(2)">2 分</button>
               <button onclick="rateTask(3)">3 分</button>
@@ -454,15 +556,21 @@
         const topK = Number(document.querySelector("#proposal-top-k").value || 3);
         const reviewTopK = Number(document.querySelector("#review-top-k").value || 2);
         if (!task) return;
-        document.querySelector("#run-status").textContent = "正在执行 MoE 路由和两轮协作...";
+        const roleName = state.activeRole === "user" ? "用户" : "项目方";
+        document.querySelector("#run-status").textContent = `${roleName}任务正在执行 MoE 路由和两轮协作...`;
         try {
           const payload = await fetchJson("/api/tasks/run", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ task, top_k: topK, review_top_k: reviewTopK }),
+            body: JSON.stringify({
+              task,
+              top_k: topK,
+              review_top_k: reviewTopK,
+              requester_role: state.activeRole,
+            }),
           });
           renderTaskDetail(payload);
-          document.querySelector("#run-status").textContent = `完成，任务 ${payload.task_id}`;
+          document.querySelector("#run-status").textContent = `${roleName}任务完成，任务 ${payload.task_id}`;
           await refreshAll();
         } catch (error) {
           document.querySelector("#run-status").textContent = error.message || "运行失败";
@@ -477,11 +585,13 @@
       async function pullModel(workerId) {
         const model = document.querySelector(`#model-${CSS.escape(workerId)}`).value.trim();
         if (!model) return;
+        document.querySelector("#run-status").textContent = `正在为 ${workerId} 下载模型 ${model}...`;
         await fetchJson(`/api/workers/${encodeURIComponent(workerId)}/pull-model`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ model }),
         });
+        document.querySelector("#run-status").textContent = `${workerId} 模型下载完成，请继续确认节点保持 ONLINE`;
         await refreshAll();
       }
 
@@ -493,6 +603,7 @@
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ model }),
         });
+        document.querySelector("#run-status").textContent = `${workerId} 已切换到模型 ${model}`;
         await refreshAll();
       }
 
@@ -508,14 +619,31 @@
         await refreshAll();
       }
 
-      document.querySelectorAll("[data-task]").forEach((button) => {
+      document.querySelectorAll("[data-role][data-task]").forEach((button) => {
         button.addEventListener("click", () => {
+          const role = button.dataset.role || "project";
+          setActiveRole(role);
           document.querySelector("#task-input").value = button.dataset.task || "";
-          document.querySelector("#run-status").textContent = "已填入样例任务，可以直接运行";
+          document.querySelector("#run-status").textContent = `${role === "user" ? "用户" : "项目方"}样例任务已填入，可以直接运行`;
         });
       });
+
+      document.querySelectorAll("[data-model]").forEach((button) => {
+        button.addEventListener("click", () => {
+          const model = button.dataset.model || "";
+          document.querySelectorAll("[id^='model-']").forEach((input) => {
+            input.value = model;
+          });
+          document.querySelector("#run-status").textContent = `已把推荐模型 ${model} 填入所有在线节点输入框`;
+        });
+      });
+
+      document.querySelector("#role-project").addEventListener("click", () => setActiveRole("project"));
+      document.querySelector("#role-user").addEventListener("click", () => setActiveRole("user"));
       document.querySelector("#run-button").addEventListener("click", runTask);
       document.querySelector("#refresh-button").addEventListener("click", refreshAll);
+
+      setActiveRole("project");
       refreshAll().catch((error) => {
         document.querySelector("#run-status").textContent = error.message || "初始化失败";
       });
