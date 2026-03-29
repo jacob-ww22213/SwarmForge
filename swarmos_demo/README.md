@@ -96,6 +96,7 @@ python3 cli.py --provider ollama --model qwen2.5:7b --task "用本地模型跑�
 ```text
 swarmos_demo/
 ├── cli.py                    # CLI entry point
+├── serve.py                  # Web demo server (V3, zero deps)
 ├── swarmos_demo.py           # Backward-compatible thin wrapper
 ├── evaluate.py               # Trace evaluation script
 ├── demo_types.py             # Re-export for backward compat
@@ -129,6 +130,9 @@ swarmos_demo/
 │   ├── task_02.txt
 │   └── task_03.txt
 │
+├── web/                      # V3 web frontend
+│   └── index.html            # Single-page app (vanilla JS)
+│
 ├── outputs/                  # Generated results (gitignored)
 └── docs/                     # Design documents
 ```
@@ -151,6 +155,29 @@ Each run produces a trace with:
   "baseline": { "summary": "...", "recommendations": [...], ... }
 }
 ```
+
+## Web Demo (V3)
+
+Start the web server (zero dependencies, pure stdlib):
+
+```bash
+python3 serve.py              # http://127.0.0.1:8000
+python3 serve.py --port 9000  # custom port
+```
+
+Features:
+- **运行任务** — 输入任务 → 实时步骤动画 → 路由/提案/批判/聚合全流程展示，可选基线对比
+- **任务回放** — 浏览已保存的 trace，逐步回放每个阶段
+- **多轮协作** — 对话式交互，每轮累积上下文，专家持续改进
+
+### REST API
+
+| Endpoint | Method | Description |
+|----------|--------|-------------|
+| `/api/run` | POST | Run a single task `{"task":"...","top_k":3,"baseline":true,"save":true}` |
+| `/api/traces` | GET | List saved traces |
+| `/api/traces/<file>` | GET | Get full trace by filename |
+| `/api/multi-round` | POST | Multi-round `{"task":"...","history":[...],"feedback":"..."}` |
 
 ## Suggested experiments
 
