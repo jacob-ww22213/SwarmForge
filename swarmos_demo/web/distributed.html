@@ -577,9 +577,9 @@
 
       function renderStats(status) {
         const cards = [
-          { label: "就绪节点", value: status.ready_workers || status.online_workers || 0 },
-          { label: "心跳在线", value: status.heartbeat_online_workers || 0 },
-          { label: "已知节点", value: status.known_workers || 0 },
+          { label: "READY 节点", value: status.ready_workers || status.online_workers || 0 },
+          { label: "仅心跳节点", value: Math.max((status.heartbeat_online_workers || 0) - (status.ready_workers || status.online_workers || 0), 0) },
+          { label: "登记节点", value: status.known_workers || 0 },
           { label: "回调失败", value: status.callback_failed_workers || 0 },
         ];
         document.querySelector("#stats").innerHTML = cards.map((card) => `

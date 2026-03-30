@@ -40,16 +40,29 @@ logger = logging.getLogger(__name__)
 class ControllerState:
     def __init__(self, stale_after_s: int) -> None:
         self.stale_after_s = stale_after_s
+        self.forget_after_s = max(stale_after_s * 30, 600)
         self._lock = Lock()
         self._condition = Condition(self._lock)
         self.workers: dict[str, dict[str, Any]] = {}
         self.worker_queues: dict[str, list[dict[str, Any]]] = {}
         self.task_results: dict[str, dict[str, dict[str, Any]]] = {}
 
+    def _prune_workers_locked(self, *, now: float | None = None) -> None:
+        current = now if now is not None else time.time()
+        stale_ids = [
+            worker_id
+            for worker_id, worker in self.workers.items()
+            if (current - float(worker.get("last_seen") or 0.0)) > self.forget_after_s
+        ]
+        for worker_id in stale_ids:
+            self.workers.pop(worker_id, None)
+            self.worker_queues.pop(worker_id, None)
+
     def upsert_worker(self, payload: dict[str, Any]) -> dict[str, Any]:
         worker_id = payload["worker_id"]
         now = time.time()
         with self._lock:
+            self._prune_workers_locked(now=now)
             previous = dict(self.workers.get(worker_id, {}))
         record = {
             "worker_id": worker_id,
@@ -88,6 +101,7 @@ class ControllerState:
         now = time.time()
         items: list[dict[str, Any]] = []
         with self._lock:
+            self._prune_workers_locked(now=now)
             for worker in self.workers.values():
                 item = dict(worker)
                 heartbeat_online = (now - worker["last_seen"]) <= self.stale_after_s
@@ -119,6 +133,7 @@ class ControllerState:
 
     def get_worker(self, worker_id: str) -> dict[str, Any] | None:
         with self._lock:
+            self._prune_workers_locked()
             worker = self.workers.get(worker_id)
             return dict(worker) if worker else None
 
@@ -135,10 +150,12 @@ class ControllerState:
 
     def mark_worker_pull(self, worker_id: str) -> dict[str, Any] | None:
         with self._condition:
+            self._prune_workers_locked()
             return self._mark_worker_pull_locked(worker_id)
 
     def should_probe_callback(self, worker_id: str) -> bool:
         with self._lock:
+            self._prune_workers_locked()
             worker = self.workers.get(worker_id)
             if worker is None or not worker.get("public_url"):
                 return False
@@ -155,6 +172,7 @@ class ControllerState:
 
     def set_callback_probe_result(self, worker_id: str, *, reachable: bool, error: str | None = None) -> None:
         with self._lock:
+            self._prune_workers_locked()
             worker = self.workers.get(worker_id)
             if worker is None:
                 return
@@ -167,6 +185,7 @@ class ControllerState:
 
     def enqueue_assignments(self, assignments: list[dict[str, Any]]) -> None:
         with self._condition:
+            self._prune_workers_locked()
             for assignment in assignments:
                 worker_id = assignment["worker_id"]
                 self.worker_queues.setdefault(worker_id, []).append(assignment)
@@ -177,6 +196,7 @@ class ControllerState:
     def next_assignment(self, worker_id: str, wait_timeout_s: float) -> dict[str, Any] | None:
         deadline = time.monotonic() + max(wait_timeout_s, 0.0)
         with self._condition:
+            self._prune_workers_locked()
             self._mark_worker_pull_locked(worker_id)
             while True:
                 queue = self.worker_queues.setdefault(worker_id, [])
@@ -192,6 +212,7 @@ class ControllerState:
 
     def submit_task_result(self, task_id: str, assignment_id: str, result: dict[str, Any]) -> None:
         with self._condition:
+            self._prune_workers_locked()
             bucket = self.task_results.setdefault(task_id, {})
             bucket[assignment_id] = result
             self._condition.notify_all()
@@ -205,6 +226,7 @@ class ControllerState:
     ) -> dict[str, dict[str, Any]]:
         deadline = time.monotonic() + timeout_s
         with self._condition:
+            self._prune_workers_locked()
             bucket = self.task_results.setdefault(task_id, {})
             while True:
                 if all(assignment_id in bucket for assignment_id in assignment_ids):

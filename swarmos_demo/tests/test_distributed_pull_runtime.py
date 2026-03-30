@@ -111,6 +111,25 @@ def test_controller_state_queue_roundtrip_collects_worker_result() -> None:
     assert results["assign-1"]["status"] == "ok"
 
 
+def test_controller_state_prunes_forgotten_workers() -> None:
+    state = ControllerState(stale_after_s=1)
+    state.upsert_worker(
+        {
+            "worker_id": "node-old",
+            "name": "Old Node",
+            "role_key": "coding_worker",
+            "role_name": "Coding Worker",
+            "provider": "mock",
+            "model": "mock-model",
+            "public_url": "http://node-old:8021",
+            "provider_ready": True,
+        }
+    )
+    state.forget_after_s = 0
+    workers = state.list_workers()
+    assert workers == []
+
+
 def test_mock_worker_runtime_health_is_ready() -> None:
     runtime = WorkerRuntime(_Args())
     ready, error, models = runtime.refresh_provider_health(force=True)

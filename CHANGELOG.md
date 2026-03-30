@@ -7,7 +7,17 @@ This project follows a lightweight SemVer-style versioning scheme while the prod
 - `PATCH`: bug fixes, documentation fixes, test-only changes, or small UX improvements
 
 Current version:
-- `0.7.2`
+- `0.7.3`
+
+## [0.7.3] - 2026-03-30
+
+Changed:
+- updated the distributed controller to forget long-stale workers automatically so old node IDs do not keep inflating the dashboard counters
+- clarified the top-level dashboard stats to distinguish `READY` nodes, heartbeat-only nodes, and total registered nodes
+
+Fixed:
+- removed the lingering server-side `worker-a` and `worker-b` demo services so the hosted dashboard only reflects real connected nodes
+- redeployed the latest worker-pull controller flow to the VPS so external Ollama nodes now become `READY` and can execute tasks through the public controller
 
 ## [0.7.2] - 2026-03-30
 
