@@ -34,7 +34,7 @@ Use this skill when the user wants to run the SwarmForge distributed demo from t
 5. Verify with:
    - `GET /api/controller/status`
    - `GET /api/workers`
-6. Tell the user to open `http://127.0.0.1:8010`.
+6. For the shared remote demo, tell the user to open `http://31.97.191.47/`. Only use `http://127.0.0.1:8010` when they are running the full demo locally on the same machine.
 
 ## Commands
 
@@ -95,8 +95,8 @@ WORKER_BIND_HOST=0.0.0.0 \
 - repository root:
   `/Users/jacob/Documents/cursor/0.5b 模型的畅想`
 - controller:
-  local dev: `127.0.0.1:8010`
-  remote demo server: `31.97.191.47/`
+  shared remote demo: `31.97.191.47/`
+  local dev only: `127.0.0.1:8010`
 - mock workers:
   `127.0.0.1:8021` and `127.0.0.1:8022`
 

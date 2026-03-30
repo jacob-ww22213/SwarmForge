@@ -94,7 +94,7 @@ On each worker machine, start a worker that points back to the controller:
 
 ```bash
 python3 -m swarmos_demo.worker \
-  --controller-url http://CONTROLLER_IP/ \
+  --controller-url http://31.97.191.47/ \
   --public-url http://WORKER_IP:8020 \
   --host 0.0.0.0 \
   --port 8020 \
@@ -130,7 +130,7 @@ python3 -m swarmos_demo.worker \
 Open the distributed dashboard:
 
 ```text
-http://CONTROLLER_IP/
+http://31.97.191.47/
 ```
 
 For a brand-new machine with no local checkout yet, bootstrap the node first:

@@ -190,7 +190,7 @@ ollama pull qwen2.5:0.5b
 
 ```bash
 python3 -m swarmos_demo.worker \
-  --controller-url http://CONTROLLER_IP/ \
+  --controller-url http://31.97.191.47/ \
   --public-url http://THIS_NODE_IP:8021 \
   --host 0.0.0.0 \
   --port 8021 \
@@ -263,7 +263,7 @@ Start one worker on each node. Example with Ollama:
 
 ```bash
 python3 -m swarmos_demo.worker \
-  --controller-url http://CONTROLLER_IP/ \
+  --controller-url http://31.97.191.47/ \
   --public-url http://WORKER_IP:8020 \
   --host 0.0.0.0 \
   --port 8020 \
@@ -294,7 +294,7 @@ python3 -m swarmos_demo.worker \
 Then open:
 
 ```text
-http://CONTROLLER_IP/
+http://31.97.191.47/
 ```
 
 The distributed dashboard supports:

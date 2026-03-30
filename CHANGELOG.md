@@ -7,7 +7,15 @@ This project follows a lightweight SemVer-style versioning scheme while the prod
 - `PATCH`: bug fixes, documentation fixes, test-only changes, or small UX improvements
 
 Current version:
-- `0.7.1`
+- `0.7.2`
+
+## [0.7.2] - 2026-03-30
+
+Changed:
+- standardized the operator-facing and worker-facing controller URL to `http://31.97.191.47/` in the top-level docs, demo README, and runner skill so onboarding no longer mixes the public URL with the internal `:8010` port
+
+Fixed:
+- fully removed stale Docker `raw`, `nat`, and `filter` rule remnants from the VPS runtime firewall state and rewrote `/etc/iptables/rules.v4` to the cleaned rule set so deleted bridge and DNAT entries do not come back after reboot
 
 ## [0.7.1] - 2026-03-30
 

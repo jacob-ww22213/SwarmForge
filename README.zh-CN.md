@@ -290,7 +290,7 @@ python3 -m swarmos_demo.worker \
 
 ```bash
 python3 -m swarmos_demo.worker \
-  --controller-url http://127.0.0.1:8010 \
+  --controller-url http://31.97.191.47/ \
   --public-url http://127.0.0.1:8021 \
   --host 0.0.0.0 \
   --port 8021 \

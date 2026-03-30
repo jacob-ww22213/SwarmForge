@@ -58,7 +58,7 @@ Run a worker on each node:
 
 ```bash
 python3 -m swarmos_demo.worker \
-  --controller-url http://CONTROLLER_IP/ \
+  --controller-url http://31.97.191.47/ \
   --public-url http://WORKER_IP:8020 \
   --host 0.0.0.0 \
   --port 8020 \
@@ -71,7 +71,7 @@ python3 -m swarmos_demo.worker \
   --role-name "Coding Worker"
 ```
 
-Then open the distributed dashboard at `http://CONTROLLER_IP/`.
+Then open the distributed dashboard at `http://31.97.191.47/`.
 
 ## Versioning
 
