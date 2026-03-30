@@ -103,26 +103,36 @@ class OpenAICompatibleProvider(BaseProvider):
 
     def _prompt_for_expert(self, expert: ExpertProfile, task: str) -> tuple[str, str]:
         base = expert.system_prompt or (
-            f"You are {expert.name}, {expert.role}"
+            f"你是 {expert.name}，角色是 {expert.role}"
         )
         system_prompt = (
             f"{base}\n"
-            "You are one expert inside a routed multi-agent system. "
-            "Respond concisely. Output sections exactly as: "
-            "SUMMARY:, RECOMMENDATIONS:, RISKS:, CONFIDENCE:."
+            "你是一个路由式多智能体系统中的专家节点。"
+            "除非必须保留代码、库名、接口名或英文专有名词，否则请全部使用简体中文回答。"
+            "请严格按以下标题输出：SUMMARY:、RECOMMENDATIONS:、RISKS:、CONFIDENCE:。"
         )
         user_prompt = textwrap.dedent(
             f"""
-            Expert name: {expert.name}
-            Expert role: {expert.role}
-            Task: {task}
+            专家名称：{expert.name}
+            专家角色：{expert.role}
+            任务：{task}
 
-            Write 1 short summary sentence, 3 recommendation bullets, 1-2 risks, and a confidence score from 0 to 1.
+            请输出：
+            1. 一句简短总结
+            2. 3 条建议
+            3. 1 到 2 条风险
+            4. 一个 0 到 1 之间的置信度
+
+            如果任务是代码评审，请优先指出明确 bug、边界条件问题、测试建议和修复方向。
+            你的内容必须使用简体中文。
             """
         ).strip()
         return system_prompt, user_prompt
 
     def _parse_structured_text(self, expert: ExpertProfile, score: float, text: str) -> ExpertProposal:
+        def _split_value(raw: str) -> str:
+            return raw.replace("：", ":", 1).split(":", 1)[1].strip()
+
         summary = ""
         recommendations: list[str] = []
         risks: list[str] = []
@@ -132,19 +142,19 @@ class OpenAICompatibleProvider(BaseProvider):
         for raw_line in text.splitlines():
             line = raw_line.strip()
             upper = line.upper()
-            if upper.startswith("SUMMARY:"):
+            if upper.startswith("SUMMARY:") or upper.startswith("摘要:") or upper.startswith("摘要："):
                 section = "summary"
-                summary = line.split(":", 1)[1].strip()
+                summary = _split_value(line)
                 continue
-            if upper.startswith("RECOMMENDATIONS:"):
+            if upper.startswith("RECOMMENDATIONS:") or upper.startswith("建议:") or upper.startswith("建议："):
                 section = "recommendations"
                 continue
-            if upper.startswith("RISKS:"):
+            if upper.startswith("RISKS:") or upper.startswith("风险:") or upper.startswith("风险："):
                 section = "risks"
                 continue
-            if upper.startswith("CONFIDENCE:"):
+            if upper.startswith("CONFIDENCE:") or upper.startswith("置信度:") or upper.startswith("置信度："):
                 section = "confidence"
-                value_text = line.split(":", 1)[1].strip()
+                value_text = _split_value(line)
                 try:
                     confidence = clamp(float(value_text), 0.0, 1.0)
                 except ValueError:
@@ -164,9 +174,9 @@ class OpenAICompatibleProvider(BaseProvider):
                 summary = item
 
         if not summary:
-            summary = text.splitlines()[0].strip() if text.strip() else "No summary returned."
+            summary = text.splitlines()[0].strip() if text.strip() else "模型没有返回有效总结。"
         if not recommendations:
-            recommendations.append("No structured recommendations returned by the model.")
+            recommendations.append("模型没有按要求返回结构化建议。")
         return ExpertProposal(
             expert_key=expert.key,
             expert_name=expert.name,
@@ -174,7 +184,7 @@ class OpenAICompatibleProvider(BaseProvider):
             score=round(score, 3),
             summary=summary,
             recommendations=recommendations,
-            risks=risks or ["No explicit risks returned by the model."],
+            risks=risks or ["模型没有明确给出风险项。"],
             confidence=round(confidence, 2),
         )
 

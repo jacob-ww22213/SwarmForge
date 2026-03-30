@@ -75,7 +75,7 @@ def test_aggregate_distributed_results_builds_summary_and_lists():
         }
     ]
     aggregate = aggregate_distributed_results("test task", proposal_results, review_results)
-    assert "round-1 workers" in aggregate["final_summary"]
+    assert "第 1 轮节点" in aggregate["final_summary"]
     assert aggregate["top_recommendations"][0] == "add metrics"
     assert "partial failure" in aggregate["top_risks"]
 
@@ -148,5 +148,5 @@ def test_build_review_task_prompt_includes_round_one_context():
             }
         ],
     )
-    assert "round 2" in prompt.lower()
+    assert "第 2 轮" in prompt
     assert "Add integration tests" in prompt

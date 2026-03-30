@@ -134,8 +134,8 @@ class WorkerRuntime:
             role=f"{expert.role} / Round-{round_index} Reviewer",
             system_prompt=(
                 f"{expert.system_prompt} "
-                "You are in a second-pass MoA refinement round. "
-                "Preserve consensus, resolve disagreements, and surface the highest-risk issues."
+                f"你现在处于第 {round_index} 轮 MoA 精炼审阅阶段。"
+                "请保留共识、压缩重复内容、解决分歧，并优先指出最关键的问题。"
             ),
         )
 

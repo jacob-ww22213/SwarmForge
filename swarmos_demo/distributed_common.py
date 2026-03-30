@@ -304,12 +304,12 @@ def slim_peer_result(item: dict[str, Any]) -> dict[str, Any]:
 
 def build_review_task_prompt(task: str, peer_results: list[dict[str, Any]]) -> str:
     lines = [
-        f"Original task: {task}",
+        f"原始任务：{task}",
         "",
-        "You are in round 2 of a multi-agent workflow.",
-        "Review the round-1 proposals, keep the strongest consensus items, and resolve the biggest disagreements.",
+        "你现在处于多智能体协作流程的第 2 轮。",
+        "请审阅第 1 轮的输出，保留最强共识，解决最大的分歧，并且全部使用简体中文回答。",
         "",
-        "Round-1 proposals:",
+        "第 1 轮提案：",
     ]
     for item in peer_results[:8]:
         lines.append(
@@ -317,16 +317,16 @@ def build_review_task_prompt(task: str, peer_results: list[dict[str, Any]]) -> s
             f"({item.get('role_name') or 'worker'}): {item.get('summary', '')}"
         )
         for recommendation in item.get("recommendations", [])[:3]:
-            lines.append(f"  recommendation: {recommendation}")
+            lines.append(f"  建议：{recommendation}")
         for risk in item.get("risks", [])[:2]:
-            lines.append(f"  risk: {risk}")
+            lines.append(f"  风险：{risk}")
     lines.extend(
         [
             "",
-            "Return a refined answer that highlights:",
-            "1. the best consensus recommendations",
-            "2. the unresolved risks",
-            "3. what should be checked before execution",
+            "请输出一个更精炼的结果，重点突出：",
+            "1. 最值得保留的共识建议",
+            "2. 仍未解决的风险",
+            "3. 执行前必须补充检查的内容",
         ]
     )
     return "\n".join(lines)
@@ -432,10 +432,12 @@ def build_worker_expert_profile(worker: dict[str, Any]) -> ExpertProfile:
     role_name = worker.get("role_name") or "Distributed worker model"
     model = worker.get("model") or "unknown-model"
     system_prompt = (
-        f"You are worker {name}. "
-        f"Your assigned role is: {role_name}. "
-        f"You are currently serving model {model}. "
-        "Return concise, practical, structured recommendations."
+        f"你是节点 {name}。"
+        f"你的当前角色是：{role_name}。"
+        f"你正在运行的模型是：{model}。"
+        "你是一个分布式专家系统中的工作节点。"
+        "除代码标识符、库名、函数名外，请默认使用简体中文回答。"
+        "回答要简洁、具体、可执行，并尽量保持结构化。"
     )
     return ExpertProfile(
         key=template_key,
@@ -486,15 +488,17 @@ def aggregate_distributed_results(
     avg_conf = round(sum(confidences) / len(confidences), 2) if confidences else 0.0
 
     summary = (
-        f"MoE selected {len(proposal_results)} round-1 workers and {len(review_results)} round-2 workers. "
-        f"Round 1 completed {len(round_one)} proposals; round 2 completed {len(round_two)} reviews. "
-        f"Average confidence across contributing workers is {avg_conf:.2f}."
+        f"MoE 阶段选择了 {len(proposal_results)} 个第 1 轮节点，"
+        f"MoA 第 2 轮选择了 {len(review_results)} 个审阅节点。"
+        f"第 1 轮成功返回 {len(round_one)} 份提案，"
+        f"第 2 轮成功返回 {len(round_two)} 份审阅结果。"
+        f"参与结果的平均置信度为 {avg_conf:.2f}。"
     )
     if active_workers:
-        summary += f" Active workers: {', '.join(dedupe_keep_order(active_workers))}."
+        summary += f" 当前参与节点：{', '.join(dedupe_keep_order(active_workers))}。"
     if consensus_items:
-        summary += f" Consensus items: {', '.join(consensus_items[:3])}."
-    summary += f" Task: {task}"
+        summary += f" 主要共识项：{'；'.join(consensus_items[:3])}。"
+    summary += f" 原始任务：{task}"
 
     return {
         "final_summary": summary,

@@ -7,7 +7,17 @@ This project follows a lightweight SemVer-style versioning scheme while the prod
 - `PATCH`: bug fixes, documentation fixes, test-only changes, or small UX improvements
 
 Current version:
-- `0.7.3`
+- `0.7.4`
+
+## [0.7.4] - 2026-03-31
+
+Changed:
+- switched distributed worker prompts, round-2 review prompts, and aggregate summaries to Chinese-first wording so real Ollama 0.5B workers are guided to answer in simplified Chinese
+- kept the structured expert protocol while allowing Chinese section labels and Chinese content to be parsed correctly
+
+Fixed:
+- removed the hard-coded English aggregate summary text that had still been leaking into live code-review task results
+- replaced English fallback strings such as missing recommendations/risks with Chinese equivalents so low-quality outputs no longer default back to English
 
 ## [0.7.3] - 2026-03-30
 
