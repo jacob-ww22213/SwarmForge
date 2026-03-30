@@ -94,7 +94,7 @@ On each worker machine, start a worker that points back to the controller:
 
 ```bash
 python3 -m swarmos_demo.worker \
-  --controller-url http://CONTROLLER_IP:8010 \
+  --controller-url http://CONTROLLER_IP/ \
   --public-url http://WORKER_IP:8020 \
   --host 0.0.0.0 \
   --port 8020 \
@@ -130,13 +130,13 @@ python3 -m swarmos_demo.worker \
 Open the distributed dashboard:
 
 ```text
-http://CONTROLLER_IP:8010
+http://CONTROLLER_IP/
 ```
 
 For a brand-new machine with no local checkout yet, bootstrap the node first:
 
 ```bash
-CONTROLLER_URL=http://31.97.191.47:8010 \
+CONTROLLER_URL=http://31.97.191.47/ \
 PUBLIC_HOST=THIS_NODE_IP \
 bash -c "$(curl -fsSL https://raw.githubusercontent.com/jacob-ww22213/SwarmForge/main/scripts/bootstrap-node.sh)"
 ```

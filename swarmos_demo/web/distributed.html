@@ -330,7 +330,7 @@
               </div>
               <div class="guide-card">
                 <strong>步骤 D</strong>
-                <span>保持 Ollama 和 worker 不退出。回到页面后，如果在线节点数量仍是 0，优先检查 `CONTROLLER_IP` 和 `NODE_PUBLIC_IP` 是否填成了真实地址，而不是 `127.0.0.1`。</span>
+                <span>保持 Ollama 和 worker 不退出。回到页面后，如果在线节点数量仍是 0，优先检查 `CONTROLLER_URL` 和 `NODE_PUBLIC_IP` 是否填成了真实地址，而不是 `127.0.0.1`。</span>
               </div>
             </div>
             <div class="model-grid" id="model-grid">
@@ -379,8 +379,8 @@
                   <span>先填 controller 地址和这台用户电脑自己的可访问 IP。向导会自动生成 bootstrap 和 skill 命令。</span>
                   <div class="field-grid-2" style="margin-top:12px;">
                     <div>
-                      <label for="wizard-controller-host">CONTROLLER_IP</label>
-                      <input id="wizard-controller-host" type="text" placeholder="例如 31.97.191.47">
+                      <label for="wizard-controller-host">CONTROLLER_URL</label>
+                      <input id="wizard-controller-host" type="text" placeholder="例如 http://31.97.191.47/">
                     </div>
                     <div>
                       <label for="wizard-node-host">NODE_PUBLIC_IP</label>
@@ -408,7 +408,7 @@
                   <strong>步骤 2. 先看地址规则</strong>
                   <span>这两个地址最容易填错，特别是跨机器接入时。</span>
                   <div class="code-block">先理解两个地址：
-- CONTROLLER_IP：当前页面所在服务器 IP，例如 31.97.191.47
+- CONTROLLER_URL：当前页面所在服务器公网入口，例如 http://31.97.191.47/
 - NODE_PUBLIC_IP：这台用户电脑能被 controller 访问到的 IP
 
 不要把远程 controller 写成 127.0.0.1。
@@ -509,7 +509,7 @@
       }
 
       function buildWizardState() {
-        const controllerHost = document.querySelector("#wizard-controller-host").value.trim() || window.location.hostname || "31.97.191.47";
+        const controllerHost = document.querySelector("#wizard-controller-host").value.trim() || window.location.origin || "http://31.97.191.47";
         const nodeHost = document.querySelector("#wizard-node-host").value.trim() || "NODE_PUBLIC_IP";
         const nodePort = document.querySelector("#wizard-node-port").value.trim() || "8021";
         const model = document.querySelector("#wizard-model").value.trim() || "qwen2.5:0.5b";
@@ -523,7 +523,7 @@
         const bootstrapCommand = [
           "ollama serve",
           `ollama pull ${model}`,
-          `CONTROLLER_URL=http://${controllerHost}:8010 \\`,
+          `CONTROLLER_URL=${controllerHost} \\`,
           `PUBLIC_HOST=${nodeHost} \\`,
           `WORKER_PORT=${nodePort} \\`,
           `WORKER_ID=${workerId} \\`,
@@ -533,7 +533,7 @@
         ].join("\n");
 
         const skillCommand = [
-          `CONTROLLER_URL=http://${controllerHost}:8010 \\`,
+          `CONTROLLER_URL=${controllerHost} \\`,
           `PUBLIC_HOST=${nodeHost} \\`,
           `WORKER_BIND_HOST=0.0.0.0 \\`,
           `./.codex/skills/swarmforge-demo-runner/scripts/start_ollama_worker.sh \\`,
@@ -542,7 +542,7 @@
 
         const manualCommand = [
           "python3 -m swarmos_demo.worker \\",
-          `  --controller-url http://${controllerHost}:8010 \\`,
+          `  --controller-url ${controllerHost} \\`,
           `  --public-url http://${nodeHost}:${nodePort} \\`,
           "  --host 0.0.0.0 \\",
           `  --port ${nodePort} \\`,
@@ -562,7 +562,7 @@
           "3. 回到本页面点击“刷新状态”",
           "4. 节点应显示为 READY，而不是只出现 heartbeat",
           "5. 如果仍为 0，优先检查：",
-          `   - CONTROLLER_URL 是否写成了 http://${controllerHost}:8010`,
+          `   - CONTROLLER_URL 是否写成了 ${controllerHost}`,
           `   - PUBLIC_HOST 是否真的是 ${nodeHost}`,
           `   - 节点是否已开始 pull controller 任务队列`,
           `   - controller 是否能访问 http://${nodeHost}:${nodePort}（仅用于回调诊断，可失败但会标红）`,
@@ -808,7 +808,7 @@
       document.querySelector("#run-button").addEventListener("click", runTask);
       document.querySelector("#refresh-button").addEventListener("click", refreshAll);
 
-      document.querySelector("#wizard-controller-host").value = window.location.hostname || "31.97.191.47";
+      document.querySelector("#wizard-controller-host").value = window.location.origin || "http://31.97.191.47";
       updateWizardCommands();
       document.querySelector("#run-status").textContent = "页面已就绪，可以下载模型或直接提交任务";
       refreshAll().catch((error) => {

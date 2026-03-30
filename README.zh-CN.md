@@ -127,7 +127,7 @@ CONTROLLER_BIND_HOST=0.0.0.0 CONTROLLER_PUBLIC_HOST=127.0.0.1 ./scripts/start-lo
 如果是“全新电脑，仓库还没拉下来”，不要先直接用这个仓库内 skill。先用 bootstrap 脚本：
 
 ```bash
-CONTROLLER_URL=http://31.97.191.47:8010 \
+CONTROLLER_URL=http://31.97.191.47/ \
 PUBLIC_HOST=当前机器IP \
 bash -c "$(curl -fsSL https://raw.githubusercontent.com/jacob-ww22213/SwarmForge/main/scripts/bootstrap-node.sh)"
 ```
@@ -197,7 +197,7 @@ ollama pull qwen2.5:0.5b
 
 ```bash
 python3 -m swarmos_demo.worker \
-  --controller-url http://控制器IP:8010 \
+  --controller-url http://控制器IP/ \
   --public-url http://当前机器IP:8021 \
   --host 0.0.0.0 \
   --port 8021 \
@@ -273,7 +273,7 @@ python3 -m swarmos_demo.controller --host 0.0.0.0 --port 8010
 
 ```bash
 python3 -m swarmos_demo.worker \
-  --controller-url http://控制器IP:8010 \
+  --controller-url http://控制器IP/ \
   --public-url http://当前机器IP:8020 \
   --host 0.0.0.0 \
   --port 8020 \
@@ -304,7 +304,7 @@ python3 -m swarmos_demo.worker \
 最后打开 controller 页面：
 
 ```text
-http://控制器IP:8010
+http://控制器IP/
 ```
 
 页面现在支持：

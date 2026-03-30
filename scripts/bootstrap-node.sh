@@ -20,7 +20,7 @@ PULL_MODEL="${PULL_MODEL:-0}"
 usage() {
   cat <<'EOF'
 usage:
-  CONTROLLER_URL=http://31.97.191.47:8010 \
+  CONTROLLER_URL=http://31.97.191.47/ \
   PUBLIC_HOST=<this-node-ip> \
   bash scripts/bootstrap-node.sh
 

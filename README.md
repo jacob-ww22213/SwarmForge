@@ -58,7 +58,7 @@ Run a worker on each node:
 
 ```bash
 python3 -m swarmos_demo.worker \
-  --controller-url http://CONTROLLER_IP:8010 \
+  --controller-url http://CONTROLLER_IP/ \
   --public-url http://WORKER_IP:8020 \
   --host 0.0.0.0 \
   --port 8020 \
@@ -71,7 +71,7 @@ python3 -m swarmos_demo.worker \
   --role-name "Coding Worker"
 ```
 
-Then open the distributed dashboard at `http://CONTROLLER_IP:8010`.
+Then open the distributed dashboard at `http://CONTROLLER_IP/`.
 
 ## Versioning
 
@@ -145,7 +145,7 @@ This repository also includes a local Codex skill for that flow:
 For a brand-new machine that does not have the repository yet, use the bootstrap script instead of the repo-local skill:
 
 ```bash
-CONTROLLER_URL=http://31.97.191.47:8010 \
+CONTROLLER_URL=http://31.97.191.47/ \
 PUBLIC_HOST=THIS_NODE_IP \
 bash -c "$(curl -fsSL https://raw.githubusercontent.com/jacob-ww22213/SwarmForge/main/scripts/bootstrap-node.sh)"
 ```

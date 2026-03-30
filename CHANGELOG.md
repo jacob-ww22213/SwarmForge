@@ -7,7 +7,16 @@ This project follows a lightweight SemVer-style versioning scheme while the prod
 - `PATCH`: bug fixes, documentation fixes, test-only changes, or small UX improvements
 
 Current version:
-- `0.7.0`
+- `0.7.1`
+
+## [0.7.1] - 2026-03-30
+
+Changed:
+- standardized the public demo entrypoint to `http://31.97.191.47/` across the distributed UI wizard, onboarding docs, bootstrap examples, and skill instructions
+- updated the browser onboarding wizard to accept a full `CONTROLLER_URL` instead of a bare IP so public port-80 access and local port-8010 access both work cleanly
+
+Fixed:
+- restored public access on `http://31.97.191.47:8010/` by removing a stale Docker DNAT rule that had been hijacking inbound `8010` traffic to a deleted container address
 
 ## [0.7.0] - 2026-03-30
 

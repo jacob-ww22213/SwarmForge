@@ -24,7 +24,7 @@ Use this skill when the user wants to run the SwarmForge distributed demo from t
 3. If the user wants a real local model:
    - make sure Ollama is already installed
    - make sure Ollama is running on `http://127.0.0.1:11434`
-   - if the controller is on another machine, set `CONTROLLER_URL=http://<controller-ip>:8010`
+   - if the controller is on another machine, set `CONTROLLER_URL=http://<controller-ip>/`
    - set `PUBLIC_HOST=<this-node-ip>` so the controller can call the worker back
    - do not use `127.0.0.1` for `CONTROLLER_URL` on a different machine
 4. For the fastest demo, start:
@@ -45,7 +45,7 @@ Use this skill when the user wants to run the SwarmForge distributed demo from t
 - Start mock research worker:
   `./.codex/skills/swarmforge-demo-runner/scripts/start_mock_worker.sh research`
 - Start Ollama worker:
-  `CONTROLLER_URL=http://31.97.191.47:8010 PUBLIC_HOST=<this-node-ip> ./.codex/skills/swarmforge-demo-runner/scripts/start_ollama_worker.sh my-node-1 "My Node" coding_worker "Coding Worker" qwen2.5:0.5b 8021`
+  `CONTROLLER_URL=http://31.97.191.47/ PUBLIC_HOST=<this-node-ip> ./.codex/skills/swarmforge-demo-runner/scripts/start_ollama_worker.sh my-node-1 "My Node" coding_worker "Coding Worker" qwen2.5:0.5b 8021`
 - Check local demo:
   `./.codex/skills/swarmforge-demo-runner/scripts/check_local_demo.sh`
 - Stop local demo:
@@ -83,7 +83,7 @@ ollama pull qwen2.5:0.5b
 ```
 
 ```bash
-CONTROLLER_URL=http://31.97.191.47:8010 \
+CONTROLLER_URL=http://31.97.191.47/ \
 PUBLIC_HOST=<this-node-ip> \
 WORKER_BIND_HOST=0.0.0.0 \
 ./.codex/skills/swarmforge-demo-runner/scripts/start_ollama_worker.sh \
@@ -96,7 +96,7 @@ WORKER_BIND_HOST=0.0.0.0 \
   `/Users/jacob/Documents/cursor/0.5b 模型的畅想`
 - controller:
   local dev: `127.0.0.1:8010`
-  remote demo server: `31.97.191.47:8010`
+  remote demo server: `31.97.191.47/`
 - mock workers:
   `127.0.0.1:8021` and `127.0.0.1:8022`
 
